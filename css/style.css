@@ -132,12 +132,12 @@ body {
   background: #42b983;
   color: #fff;
 }
-.article-entry h2,
-.article-entry h3,
-.article-entry h4,
-.article-entry h5,
-.article-entry h6 {
+/*, .article-entry h3, .article-entry h4, .article-entry h5, .article-entry h6*/
+.article-entry h2 {
   color: #42b983;
+}
+.article-entry ul {
+  font-size: 18px;
 }
 #rocket {
   position: fixed;
@@ -311,6 +311,11 @@ body {
     margin: 0 0.980392156862745%;
   }
 }
+@media screen and (min-width: 768px) {
+  #main {
+    float: right;
+  }
+}
 .article-date,
 .article-category-link,
 .article-views,
@@ -337,28 +342,32 @@ body {
 }
 .article-entry h1,
 .widget h1 {
-  font-size: 25px;
+  font-size: 32px;
 }
 .article-entry h2,
 .widget h2 {
-  font-size: 23px;
+  font-size: 30px;
 }
 .article-entry h3,
 .widget h3 {
-  font-size: 20px;
+  font-size: 27px;
 }
 .article-entry h4,
 .widget h4 {
-  font-size: 17px;
+  font-size: 24px;
 }
 .article-entry h5,
 .widget h5 {
-  font-size: 1em;
+  font-size: 1.2em;
 }
 .article-entry h6,
 .widget h6 {
   font-size: 1em;
   color: #999;
+}
+.article-entry p,
+.widget p {
+  font-size: 20px;
 }
 @media screen and (max-width: 479px) {
   .article-entry h1,
@@ -857,7 +866,7 @@ body {
   text-align: center;
 }
 .article-header h1 {
-  font-size: 25px;
+  font-size: 40px;
   font-weight: bold;
   font-family: Arial, "Hiragino Sans GB", "Microsoft YaHei Light", "微软雅黑", SimSun, "宋体", Helvetica, Tahoma, "Arial sans-serif";
 }
@@ -867,7 +876,7 @@ body {
   }
 }
 .article-header .thumb {
-  font-size: 23px;
+  font-size: 38px;
   margin-top: 20px;
   margin-bottom: 20px;
 }
@@ -914,6 +923,7 @@ a.article-title:hover {
 .article-entry table {
   line-height: 1.6em;
   margin: 1.6em 0;
+  font-size: 20px;
 }
 .article-entry h1,
 .article-entry h2,
@@ -981,8 +991,10 @@ a.article-title:hover {
   background: rgba(208,211,248,0.15);
 }
 .article-entry blockquote p {
-  font-size: 14px;
-  margin: 15px 0;
+  font-family: "Times New Roman", Georgia, Serif;
+  font-style: oblique;
+  font-size: 23px;
+  margin: 20px 0;
 }
 .article-entry blockquote footer {
   font-size: 14px;
