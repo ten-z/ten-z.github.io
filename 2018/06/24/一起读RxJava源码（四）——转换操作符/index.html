@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>一起读rxjava源码（四）——转换操作符 | TEN-Z&#39;S BLOG</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  
+  <meta name="keywords" content="RxJava" />
+  
+  
+  
+  
+  <meta name="description" content="上一篇我们介绍了RxJava最基本的实现方式以及源码逻辑，但是仅仅会基础实现方式是远远不够的。RxJava有着大量的各式各样的操作符（如上图谱所示）。也正是因为这些操作符，使得RxJava可以很简单且简洁的实现一些复杂的问题。这也是RxJava以至于Rx系列强大的原因之一。">
+<meta name="keywords" content="RxJava">
+<meta property="og:type" content="article">
+<meta property="og:title" content="一起读RxJava源码（四）——转换操作符">
+<meta property="og:url" content="https://ten-z.github.io/2018/06/24/一起读RxJava源码（四）——转换操作符/index.html">
+<meta property="og:site_name" content="TEN-Z&#39;S BLOG">
+<meta property="og:description" content="上一篇我们介绍了RxJava最基本的实现方式以及源码逻辑，但是仅仅会基础实现方式是远远不够的。RxJava有着大量的各式各样的操作符（如上图谱所示）。也正是因为这些操作符，使得RxJava可以很简单且简洁的实现一些复杂的问题。这也是RxJava以至于Rx系列强大的原因之一。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://ten-z.github.io/2018/06/24/一起读RxJava源码（四）——转换操作符/caozuofu.jpg">
+<meta property="og:image" content="https://ten-z.github.io/2018/06/24/一起读RxJava源码（四）——转换操作符/nan.jpg">
+<meta property="og:image" content="https://ten-z.github.io/2018/06/24/一起读RxJava源码（四）——转换操作符/zhuanhuan.png">
+<meta property="og:image" content="https://ten-z.github.io/2018/06/24/一起读RxJava源码（四）——转换操作符/biehuang.jpg">
+<meta property="og:image" content="https://ten-z.github.io/2018/06/24/一起读RxJava源码（四）——转换操作符/map.jpg">
+<meta property="og:image" content="https://ten-z.github.io/2018/06/24/一起读RxJava源码（四）——转换操作符/map_rewuxian.jpg">
+<meta property="og:image" content="https://ten-z.github.io/2018/06/24/一起读RxJava源码（四）——转换操作符/map_zhanglei.png">
+<meta property="og:updated_time" content="2018-10-07T15:38:43.534Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="一起读RxJava源码（四）——转换操作符">
+<meta name="twitter:description" content="上一篇我们介绍了RxJava最基本的实现方式以及源码逻辑，但是仅仅会基础实现方式是远远不够的。RxJava有着大量的各式各样的操作符（如上图谱所示）。也正是因为这些操作符，使得RxJava可以很简单且简洁的实现一些复杂的问题。这也是RxJava以至于Rx系列强大的原因之一。">
+<meta name="twitter:image" content="https://ten-z.github.io/2018/06/24/一起读RxJava源码（四）——转换操作符/caozuofu.jpg">
+  
+
+  
+
+  <link rel="icon" href="/css/images/mylogo.jpg">
+  <link rel="apple-touch-icon" href="/css/images/mylogo.jpg">
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans|Montserrat:700" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,300italic,400italic" rel="stylesheet" type="text/css">
+  <link href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet">
+  <style type="text/css">
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/9749f0/00000000000000000001008f/27/l?subset_id=2&fvd=n5) format("woff2");font-weight:500;font-style:normal;}
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/90cf9f/000000000000000000010091/27/l?subset_id=2&fvd=n7) format("woff2");font-weight:500;font-style:normal;}
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/8a5494/000000000000000000013365/27/l?subset_id=2&fvd=n4) format("woff2");font-weight:lighter;font-style:normal;}
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/d337d8/000000000000000000010095/27/l?subset_id=2&fvd=i4) format("woff2");font-weight:400;font-style:italic;}</style>
+  <link rel="stylesheet" href="/css/style.css">
+
+  <script src="/js/jquery-3.1.1.min.js"></script>
+  <script src="/js/bootstrap.js"></script>
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="/css/bootstrap.css" >
+
+  
+    <link rel="stylesheet" href="/css/dialog.css">
+  
+
+  
+
+  
+    <link rel="stylesheet" href="/css/header-post.css" >
+  
+
+  
+  
+  
+    <link rel="stylesheet" href="/css/vdonate.css" >
+  
+
+</head>
+
+
+
+  <body data-spy="scroll" data-target="#toc" data-offset="50">
+
+
+  
+  <div id="container">
+    <div id="wrap">
+      
+        <header>
+
+    <div id="allheader" class="navbar navbar-default navbar-static-top" role="navigation">
+        <div class="navbar-inner">
+          
+          <div class="container"> 
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+              <span class="sr-only">Toggle navigation</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+
+            
+              <a class="brand" style="
+                 margin-top: 0px;"  
+                href="#" data-toggle="modal" data-target="#myModal" >
+                  <img width="124px" height="124px" alt="Hike News" src="/css/images/mylogo.jpg">
+              </a>
+            
+            
+            <div class="navbar-collapse collapse">
+              <ul class="hnav navbar-nav">
+                
+                  <li> <a class="main-nav-link" href="/">首页</a> </li>
+                
+                  <li> <a class="main-nav-link" href="/archives">归档</a> </li>
+                
+                  <li> <a class="main-nav-link" href="/categories">分类</a> </li>
+                
+                  <li> <a class="main-nav-link" href="/tags">标签</a> </li>
+                
+                  <li> <a class="main-nav-link" href="/about">关于</a> </li>
+                
+                  <li><div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="请输入关键词..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(无标题)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div></li>
+            </div>
+          </div>
+                
+      </div>
+    </div>
+
+</header>
+
+
+
+      
+            
+      <div id="content" class="outer">
+        
+          <section id="main" style="float:none;"><article id="post-一起读RxJava源码（四）——转换操作符" style="width: 75%; float:left;" class="article article-type-post" itemscope itemprop="blogPost" >
+  <div id="articleInner" class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="thumb" class="article-title" itemprop="name">
+      一起读RxJava源码（四）——转换操作符
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-meta">
+      
+	<a href="/2018/06/24/一起读RxJava源码（四）——转换操作符/" class="article-date">
+	  <time datetime="2018-06-24T13:20:25.000Z" itemprop="datePublished">2018-06-24</time>
+	</a>
+
+      
+    <a class="article-category-link" href="/categories/Android/">Android</a>
+
+      
+	<a class="article-views">
+	<span id="busuanzi_container_page_pv">
+		阅读量<span id="busuanzi_value_page_pv"></span>
+	</span>
+	</a>
+
+    </div>
+    <div class="article-entry" itemprop="articleBody">
+      
+        <img src="/2018/06/24/一起读RxJava源码（四）——转换操作符/caozuofu.jpg" title="操作符图谱">
+<p>　　上一篇我们介绍了RxJava最基本的实现方式以及源码逻辑，但是仅仅会基础实现方式是远远不够的。RxJava有着大量的各式各样的操作符（如上图谱所示）。也正是因为这些操作符，使得RxJava可以很简单且简洁的实现一些复杂的问题。这也是RxJava以至于Rx系列强大的原因之一。</p>
+<a id="more"></a>
+<blockquote>
+<p style="color:Darkorange">版权声明：本文为博主原创文章，未经博主允许不得转载。</p>
+
+<p><strong>一起读RxJava源码系列：</strong><br><a href="https://ten-z.github.io/2018/05/12/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%B8%80%EF%BC%89%E2%80%94%E2%80%94%E7%AE%80%E4%BB%8B/#more">一起读RxJava源码（一）——简介</a><br><a href="https://www.zybuluo.com/cmd/" target="_blank" rel="noopener">一起读RxJava源码（二）——基础知识:观察者模式</a></p>
+</blockquote>
+<h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>　　上一篇我们介绍的RxJava最基本的实现方式虽然没有展现出RxJava的强大，但是却是一切的基础。没有看过的工友建议先看下，以免这一章节消化不了。</p>
+<img src="/2018/06/24/一起读RxJava源码（四）——转换操作符/nan.jpg" title="难">
+<p>　　RxJava的操作符有很多，上面的图谱里就能看出来，具体使用可以参考<a href="http://reactivex.io/documentation/operators.html" target="_blank" rel="noopener">官网介绍</a>。这里主要介绍的是转换操作符，它作用于一个可观测序列，然后变换它发射的值，最后用一种新的形式返回它们。直接看概念可能会不太好理解，这篇文章以相对简单且常用的转换操作符map为例，进行源码的分析。了解map操作符的逻辑之后可能再来看概念就容易理解得多了。</p>
+<blockquote><p>转换操作符实现的其实是“变换”的原理。所谓变换，就是将事件序列中的对象或整个序列进行加工处理，转换成不同的事件或事件序列。</p>
+<footer><strong>——转换操作符原理</strong></footer></blockquote>
+<h1 id="2-map操作符的简单应用"><a href="#2-map操作符的简单应用" class="headerlink" title="2. map操作符的简单应用"></a>2. map操作符的简单应用</h1><p>　　先举个例子，将一组字符串中的小写字符转换成大写输出，用map可以这样实现：<br><figure class="highlight lasso"><figcaption><span>map实现字符串中小写转大写</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">List</span>&lt;<span class="built_in">String</span>&gt; froms = <span class="literal">new</span> ArrayList&lt;&gt;();</span><br><span class="line">froms.add(<span class="string">"hello"</span>);</span><br><span class="line">froms.add(<span class="string">"rxjava"</span>);</span><br><span class="line">froms.add(<span class="string">"毁我青春"</span>);</span><br><span class="line">Observable.from(froms)</span><br><span class="line">          .<span class="built_in">map</span>(<span class="literal">new</span> Func1&lt;<span class="built_in">String</span>, <span class="built_in">String</span>&gt;() &#123;</span><br><span class="line">          	@Override</span><br><span class="line">           	<span class="keyword">public</span> <span class="built_in">String</span> call(<span class="built_in">String</span> s) &#123;</span><br><span class="line">                   <span class="keyword">return</span> s.toUpperCase();</span><br><span class="line">              	&#125;</span><br><span class="line">           &#125;)</span><br><span class="line">           .subscribe(<span class="literal">new</span> Subscriber&lt;<span class="built_in">String</span>&gt;() &#123;</span><br><span class="line">               @Override</span><br><span class="line">               <span class="keyword">public</span> <span class="literal">void</span> onCompleted() &#123;</span><br><span class="line">		   <span class="comment">//System.out.println("onCompleted");</span></span><br><span class="line">		   <span class="keyword">Log</span>.i(<span class="string">"tag"</span>, <span class="string">"onCompleted"</span>);</span><br><span class="line">               &#125;</span><br><span class="line"></span><br><span class="line">               @Override</span><br><span class="line">               <span class="keyword">public</span> <span class="literal">void</span> onError(Throwable e) &#123;</span><br><span class="line"></span><br><span class="line">               &#125;</span><br><span class="line"></span><br><span class="line">               @Override</span><br><span class="line">               <span class="keyword">public</span> <span class="literal">void</span> onNext(<span class="built_in">String</span> s) &#123;</span><br><span class="line">                   <span class="keyword">Log</span>.i(<span class="string">"tag"</span>, <span class="string">"onNext="</span> + s);</span><br><span class="line">               &#125;</span><br><span class="line">            &#125;);</span><br></pre></td></tr></table></figure></p>
+<p>输出的结果是这样的：<br><figure class="highlight makefile"><figcaption><span>输出结果</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">onNext=HELLO</span><br><span class="line">onNext=RXJAVA</span><br><span class="line">onNext=毁我青春</span><br><span class="line">onCompleted</span><br></pre></td></tr></table></figure></p>
+<p>　　这里Observable.from()这个方法是将传入的数组或Iterable拆分成具体对象后，依次发送出来。和之前的之前的create(OnSubscribe)是等价的。</p>
+<p>　　可以看到，map()方法将每次接收到的String对象进行了toUpperCase()操作，经过map()方法后，Subscriber里onNext()收到的就是转换成大写的内容。当然，map()方法也可以进行其他类型的转换，比如将int转换成字符串，或是字符串转换成Bitmap对象等，在Func1类构造函数的泛型参数<code>(new Func1&lt;String, String&gt;())</code>就是转换前和转换后的对象类型。</p>
+<p>　　<strong>总结一下map()的用法：它是对事件对象一对一的直接变换，也是RxJava最常用的变换。</strong>如下图所示：</p>
+<img src="/2018/06/24/一起读RxJava源码（四）——转换操作符/zhuanhuan.png" title="map">
+<h1 id="3-map操作符的源码解析"><a href="#3-map操作符的源码解析" class="headerlink" title="3. map操作符的源码解析"></a>3. map操作符的源码解析</h1><p>为了基于上一章节所讲的内容，我们把上面的例子变得简单一点：<br><figure class="highlight typescript"><figcaption><span>RxJava基本实现+map</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">Observable.create(<span class="keyword">new</span> Observable.OnSubscribe&lt;<span class="built_in">String</span>&gt;() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="built_in">void</span> call(Subscriber&lt;? <span class="keyword">super</span> <span class="built_in">String</span>&gt; subscriber) &#123;</span><br><span class="line">        subscriber.onNext(<span class="string">"hello rxjava"</span>);</span><br><span class="line">        subscriber.onCompleted();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;).map(<span class="keyword">new</span> Func1&lt;<span class="built_in">String</span>, <span class="built_in">String</span>&gt;() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="built_in">String</span> call(<span class="built_in">String</span> s) &#123;</span><br><span class="line">        <span class="keyword">return</span> s.toUpperCase();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;).subscribe(<span class="keyword">new</span> Subscriber&lt;<span class="built_in">String</span>&gt;() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="built_in">void</span> onCompleted() &#123;</span><br><span class="line">        Log.i(<span class="string">"tag"</span>, <span class="string">"onCompleted"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="built_in">void</span> onError(Throwable e) &#123;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="built_in">void</span> onNext(<span class="built_in">String</span> s) &#123;</span><br><span class="line">        Log.i(<span class="string">"tag"</span>, <span class="string">"onNext="</span> + s);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure></p>
+<p>　　由于上一章节讲解了Observable.create()和.subscribe()的源码，所以这里用了上一章节介绍的<strong>RxJava基本实现</strong>。from()的源码解析这里就不多赘述了，主要还是理解map的基本的逻辑。</p>
+<img src="/2018/06/24/一起读RxJava源码（四）——转换操作符/biehuang.jpg" title="别慌">
+<p>　　这里Observable.create()自然不必多说，最终返回了一个新创建的被观察者Observable。下一步会执行Observable.map()。</p>
+<p>　　map()的源码也在Observable类里：<br><figure class="highlight swift"><figcaption><span>map()源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> &lt;<span class="type">R</span>&gt; <span class="type">Observable</span>&lt;<span class="type">R</span>&gt; <span class="built_in">map</span>(<span class="type">Func1</span>&lt;? <span class="keyword">super</span> <span class="type">T</span>, ? extends <span class="type">R</span>&gt; <span class="function"><span class="keyword">func</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> unsafeCreate(new <span class="type">OnSubscribeMap</span>&lt;<span class="type">T</span>, <span class="type">R</span>&gt;(this, <span class="function"><span class="keyword">func</span>));</span></span><br><span class="line"><span class="function">&#125;</span></span><br></pre></td></tr></table></figure></p>
+<p>再看下unsafeCreate()的类：<br><figure class="highlight java"><figcaption><span>unsafeCreate()源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">Observable&lt;T&gt; <span class="title">unsafeCreate</span><span class="params">(OnSubscribe&lt;T&gt; f)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> Observable&lt;T&gt;(RxJavaHooks.onCreate(f));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　是不是有点眼熟？？因为跟Observable.create()的实现是一毛一样的啊！可以现在回到上一章节对比一下。也就是说，map()方法也是直接返回了一个新创建的被观察者Observable，这是一个新的被观察者，我们把它称为ObservableB；一开始通过Observable.create()创建的Observable我们称之为ObservableA。</p>
+<p>　　我们可以看到在ObservableB中，传入RxJavaHooks.onCreate(f)的参数可以追溯到map()方法里传入的new OnSubscribeMap<t, r="">(this, func)。所以，ObservableB对应的OnSubscribe就是这个OnSubscribeMap。而ObservableA和变换函数Func1则作为构造OnSubscribeMap的参数。</t,></p>
+<p>　　现在我们现在把视野拉远，从整体再看下这个例子的逻辑：<br><img src="/2018/06/24/一起读RxJava源码（四）——转换操作符/map.jpg" title="map"><br>　　也就是说，<strong>在执行了map方法后，变成了ObservableB和Subscriber建立订阅关系</strong>。我们把最后的观察者也起个名子区分，叫SubscriberC。总结下，就是<strong>原本ObservableA.subscribe(SubscriberC)之间加了.map()后，现在变成了ObservableB.subscribe(SubscriberC)。</strong></p>
+<p>　　根据上一篇文章介绍的<strong>RxJava基础流程</strong>，在ObservableB.subscribe(SubscriberC)建立订阅关系后，应该执行ObservableB的onSubscribe里的call方法。上面讲到了 ObservableB对应的OnSubscribe是OnSubscribeMap，我们来看一下OnSubscribeMap的源码：</p>
+<figure class="highlight aspectj"><figcaption><span>OnSubscribeMap源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">OnSubscribeMap</span>&lt;<span class="title">T</span>, <span class="title">R</span>&gt; <span class="keyword">implements</span> <span class="title">OnSubscribe</span>&lt;<span class="title">R</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">final</span> Observable&lt;T&gt; source;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">final</span> Func1&lt;? <span class="keyword">super</span> T, ? <span class="keyword">extends</span> R&gt; transformer;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">OnSubscribeMap</span><span class="params">(Observable&lt;T&gt; source, Func1&lt;? <span class="keyword">super</span> T, ? <span class="keyword">extends</span> R&gt; transformer)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.source = source;</span><br><span class="line">        <span class="keyword">this</span>.transformer = transformer;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">call</span><span class="params">(<span class="keyword">final</span> Subscriber&lt;? <span class="keyword">super</span> R&gt; o)</span> </span>&#123;</span><br><span class="line">        MapSubscriber&lt;T, R&gt; parent = <span class="keyword">new</span> MapSubscriber&lt;T, R&gt;(o, transformer);</span><br><span class="line">        o.add(parent);</span><br><span class="line">        source.unsafeSubscribe(parent);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">MapSubscriber</span>&lt;<span class="title">T</span>, <span class="title">R</span>&gt; <span class="keyword">extends</span> <span class="title">Subscriber</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">final</span> Subscriber&lt;? <span class="keyword">super</span> R&gt; actual;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">final</span> Func1&lt;? <span class="keyword">super</span> T, ? <span class="keyword">extends</span> R&gt; mapper;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">boolean</span> done;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">MapSubscriber</span><span class="params">(Subscriber&lt;? <span class="keyword">super</span> R&gt; actual, Func1&lt;? <span class="keyword">super</span> T, ? <span class="keyword">extends</span> R&gt; mapper)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.actual = actual;</span><br><span class="line">            <span class="keyword">this</span>.mapper = mapper;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">onNext</span><span class="params">(T t)</span> </span>&#123;</span><br><span class="line">            R result;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                result = mapper.call(t);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Throwable ex) &#123;</span><br><span class="line">                Exceptions.throwIfFatal(ex);</span><br><span class="line">                unsubscribe();</span><br><span class="line">                onError(OnErrorThrowable.addValueAsLastCause(ex, t));</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            actual.onNext(result);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">onError</span><span class="params">(Throwable e)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (done) &#123;</span><br><span class="line">                RxJavaHooks.onError(e);</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            done = <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line">            actual.onError(e);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">onCompleted</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (done) &#123;</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            actual.onCompleted();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">setProducer</span><span class="params">(Producer p)</span> </span>&#123;</span><br><span class="line">            actual.setProducer(p);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>　　OnSubscribeMap实现了OnSubscribe接口，因此OnSubscribeMap就是一个OnSubscribe。我们来看下OnSubscribeMap的call方法。首先通过我们的观察者o(即SubscriberC)和转换函数transformer构造了一个MapSubscriber。然后调用了source的unsafeSubscribe(）。<br>　　我们看下这个source是从<code>OnSubscribeMap(Observable&lt;T&gt; source, Func1&lt;? super T, ? extends R&gt; transformer)</code>这个构造器里传过来的。往上一级看，这个构造器是在ObservableA.map()方法里调用的（具体源码请往上翻到map()源码），这里source传入的就是ObservableA。</p>
+<p>　　所以这里小结下，<strong>OnSubscribeMap的call方法里本质是调用了ObservableA的unsafeSubscribe()</strong>。我们继续深入，看下unsafeSubscribe()源码：</p>
+<figure class="highlight aspectj"><figcaption><span>unsafeSubscribe()源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="function">Subscription <span class="title">unsafeSubscribe</span><span class="params">(Subscriber&lt;? <span class="keyword">super</span> T&gt; subscriber)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">       </span><br><span class="line">        subscriber.onStart();</span><br><span class="line">        </span><br><span class="line">        RxJavaHooks.onObservableStart(<span class="keyword">this</span>, onSubscribe).call(subscriber);</span><br><span class="line">        <span class="function"><span class="keyword">return</span> RxJavaHooks.<span class="title">onObservableReturn</span><span class="params">(subscriber)</span></span>;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">        </span><br><span class="line">        Exceptions.throwIfFatal(e);</span><br><span class="line">       </span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            subscriber.onError(RxJavaHooks.onObservableError(e));</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable e2) &#123;</span><br><span class="line">            Exceptions.throwIfFatal(e2);</span><br><span class="line">            </span><br><span class="line">            RuntimeException r = <span class="keyword">new</span> OnErrorFailedException(<span class="string">"Error occurred attempting to subscribe ["</span> + e.getMessage() + <span class="string">"] and then again while trying to pass to onError."</span>, e2);</span><br><span class="line">            </span><br><span class="line">            RxJavaHooks.onObservableError(r);</span><br><span class="line">            </span><br><span class="line">            <span class="keyword">throw</span> r; <span class="comment">// NOPMD</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">return</span> Subscriptions.<span class="title">unsubscribed</span><span class="params">()</span></span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>　　有没有很眼熟？？可以返回上一篇文章里.subscribe()源码解析看一下，是的，你应该没有记错，这段代码跟.subscribe()的源码基本完全一样。核心的那句又出来了：<br><figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="selector-tag">RxJavaHooks</span><span class="selector-class">.onObservableStart</span>(<span class="selector-tag">observable</span>,<span class="selector-tag">observable</span><span class="selector-class">.onSubscribe</span>)<span class="selector-class">.call</span>(<span class="selector-tag">subscriber</span>);</span><br></pre></td></tr></table></figure></p>
+<p>　　也就是说，调用了ObservableA的onSubscribe里的call方法，也就是执行了ObservableA.subscribe(MapSubscriber)。而MapSubscriber其实是在OnSubscribeMap.call()中new出来的。可以理解成是属于B的。执行到这里B不再只是SubscriberC的被观察者了，他同时也是ObservableA的观察者，记为 SubscriberB。B = (ObservableB+SubscriberB)。</p>
+<p>　　所以到这里，我们可以这样理解：</p>
+<blockquote>
+<p>第一步：ObservableB.subscribe(SubscriberC)<br>第二步：调用ObservableB的call方法<br>第三步：在ObservableB的call方法里创建了SubscriberB ，并调用了ObservableA.subscribe(SubscriberB)</p>
+</blockquote>
+<p>　　下一步跟之前以及<strong>RxJava基本调用</strong>逻辑一样，执行ObservableA的onSubscribe里的call方法。就是执行基本源码的这两句：<br><figure class="highlight abnf"><figcaption><span>ObservableA的onSubscribe</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">subscriber.onNext(<span class="string">"hello rxjava"</span>)<span class="comment">;</span></span><br><span class="line">subscriber.onCompleted()<span class="comment">;</span></span><br></pre></td></tr></table></figure></p>
+<p>　　也是根据上一章讲的<strong>RxJava基本调用</strong>（所以基本调用的逻辑很重要啊），这里事件开始下发了。下一步会执行<code>ObservableA.subscribe(SubscriberB)</code>中SubscriberB的onNext()和onCompleted()，也就是MapSubscriber。</p>
+<p>　　MapSubscriber的源码在刚才的OnSubscribeMap里，它的onNext()里主要执行就下面两句：<br><figure class="highlight abnf"><figcaption><span>MapSubscriber的onNext()</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">result</span> = mapper.call(t)<span class="comment">;</span></span><br><span class="line">actual.onNext(result)<span class="comment">;</span></span><br></pre></td></tr></table></figure></p>
+<p>　　这里mapper就是变换函数，通过MapSubscriber构造器向上找，发现就是OnSubscribeMap的 transformer，这个transformer也是OnSubscribeMap构造器传入的。再往上看，豁然开朗：<br>就是map()里传的Func1，mapper.call也就是执行我们.map()里自己写的回调：<br><figure class="highlight arduino"><figcaption><span>mapper</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">.<span class="built_in">map</span>(<span class="keyword">new</span> Func1&lt;<span class="keyword">String</span>, <span class="keyword">String</span>&gt;() &#123;</span><br><span class="line">    @Override</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">String</span> call(<span class="keyword">String</span> s) &#123;</span><br><span class="line">        <span class="built_in">return</span> s.toUpperCase();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure></p>
+<p>　　这里其实就是实现我们自己定义的变换了。我们定义的变换函数将String中的所有小写转换成了大写。下一步会执行actual.onNext(result)，这里就不再一层层的找了，这个actual其实就是o(即SubscriberC)。在SubscriberC的 onNext中我们输出了接收到的result，也就是变换过后的String。</p>
+<p>　　同样在调用MapSubscriber.onCompleted()时会执行subscriberOne.onCompleted()。这样就完成了一整套的调用流程。</p>
+<p>　　<strong>终于到最后总结了，想把转换说明白还是挺费劲的。前面没看懂的话可以看下下面总结出的调用逻辑（整合了基本调用的逻辑）：</strong></p>
+<blockquote>
+<p>第一步：创建ObservableA<br>第二步：在调用.map()时创建ObservableB<br>第三步：执行ObservableB.subscribe(SubscriberC)<br>第四步：调用ObservableB的call方法<br>第五步：在ObservableB的call方法里创建了SubscriberB，并调用了ObservableA.subscribe(SubscriberB)<br>第六步：调用ObservableA里onSubscribe里的call，事件从A开始下发<br>第七步：SubscriberB的onNext接收事件，并调用map()里的转换方法，事件继续下发<br>第八步：SubscriberC的onNext接收转换后的事件。</p>
+</blockquote>
+<p>　　<strong>至此，从被观察者A到观察者C的事件流就完成了。中间的转换可以简单理解成经历了一个B,B对A和C分别建立了观察和被观察的关系。在B中实现了事件流的转换。从A和C的一层订阅变成了ABC的两层订阅。</strong><br>　　看下扔物线大神的这张图可能会更好理解我所说的<strong>两层订阅</strong>：<br><img src="/2018/06/24/一起读RxJava源码（四）——转换操作符/map_rewuxian.jpg" title="两层订阅"></p>
+<p>　　张磊大神的这张图则可以很清楚的理解调用逻辑：<br><img src="/2018/06/24/一起读RxJava源码（四）——转换操作符/map_zhanglei.png" title="map调用逻辑"></p>
+<h1 id="4-总结"><a href="#4-总结" class="headerlink" title="4. 总结"></a>4. 总结</h1><p>　　到这里，map()转换原理就讲解完了，其实map()的原理本质是lift()。只不过map()这个操作符举例比较容易，逻辑也相对简单。有兴趣的工友可以看下扔物线大神的<a href="https://gank.io/post/560e15be2dca930e00da1083#toc_18" target="_blank" rel="noopener">《给 Android 开发者的 RxJava 详解》</a>里对lift()原理的解释，你会发现和map()实现是一样的。<br>　　下一章节，会基于这个变换原理，来讲解线程调度的源码分析，调用逻辑和map很相似。建议大家先把转换原理搞明白。大家加油！</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div id="donation_div"></div>
+
+<script src="/js/vdonate.js"></script>
+<script>
+var a = new Donate({
+  title: '谢谢你看我的博客。如果觉得我的文章对您有用，请随意打赏。', // 可选参数，打赏标题
+  btnText: '打赏支持', // 可选参数，打赏按钮文字
+  el: document.getElementById('donation_div'),
+  wechatImage: '/donate/images/wechat.jpg',
+  alipayImage: '/donate/images/alibaba.jpg'
+});
+</script>
+      
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RxJava/">RxJava</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2018/08/01/一起读RxJava源码（五）——线程调度/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">上一篇</strong>
+      <div class="article-nav-title">
+        
+          一起读RxJava源码（五）——线程调度
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2018/06/08/一起读RxJava源码（三）——RxJava的基本实现/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">下一篇</strong>
+      <div class="article-nav-title">一起读RxJava源码（三）——RxJava的基本实现</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+<!-- Table of Contents -->
+
+  <aside id="toc-sidebar">
+    <div id="toc" class="toc-article">
+    <strong class="toc-title">文章目录</strong>
+    
+        <ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-前言"><span class="nav-text">1. 前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-map操作符的简单应用"><span class="nav-text">2. map操作符的简单应用</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-map操作符的源码解析"><span class="nav-text">3. map操作符的源码解析</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-总结"><span class="nav-text">4. 总结</span></a></li></ol>
+    
+    </div>
+  </aside>
+
+
+</section>
+        
+      </div>
+      
+      <footer id="footer">
+  
+
+  <div class="container">
+      	<div class="row">
+	      <p> Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> and <a href="https://github.com/iTimeTraveler/hexo-theme-hiker" target="_blank">Hexo-theme-hiker</a> </p>
+	      <p id="copyRightEn">Copyright &copy; 2018 - 2018 TEN-Z&#39;S BLOG All Rights Reserved.</p>
+	      
+	      
+    		<p class="busuanzi_uv">
+				访客数 : <span id="busuanzi_value_site_uv"></span> |  
+				访问量 : <span id="busuanzi_value_site_pv"></span>
+		    </p>
+  		   
+		</div>
+
+		
+  </div>
+</footer>
+
+
+<!-- min height -->
+
+<script>
+    var wrapdiv = document.getElementById("wrap");
+    var contentdiv = document.getElementById("content");
+    var allheader = document.getElementById("allheader");
+
+    wrapdiv.style.minHeight = document.body.offsetHeight + "px";
+    if (allheader != null) {
+      contentdiv.style.minHeight = document.body.offsetHeight - allheader.offsetHeight - document.getElementById("footer").offsetHeight + "px";
+    } else {
+      contentdiv.style.minHeight = document.body.offsetHeight - document.getElementById("footer").offsetHeight + "px";
+    }
+</script>
+    </div>
+    <!-- <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+    <a href="/categories" class="mobile-nav-link">Categories</a>
+  
+    <a href="/tags" class="mobile-nav-link">Tags</a>
+  
+    <a href="/about" class="mobile-nav-link">About</a>
+  
+</nav> -->
+    
+
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/scripts.js"></script>
+
+
+
+
+  <script src="/js/dialog.js"></script>
+
+
+
+
+
+
+
+
+
+	<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js">
+	</script>
+
+
+
+
+
+
+  </div>
+
+  <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" style="display: none;">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="myModalLabel">设置</h2>
+      </div>
+      <hr style="margin-top:0px; margin-bottom:0px; width:80%; border-top: 3px solid #000;">
+      <hr style="margin-top:2px; margin-bottom:0px; width:80%; border-top: 1px solid #000;">
+
+
+      <div class="modal-body">
+          <div style="margin:6px;">
+            <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" onclick="javascript:setFontSize();" aria-expanded="true" aria-controls="collapseOne">
+              正文字号大小
+            </a>
+          </div>
+          <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+          <div class="panel-body">
+            您已调整页面字体大小
+          </div>
+        </div>
+      
+
+
+          <div style="margin:6px;">
+            <a data-toggle="collapse" data-parent="#accordion" href="#collapseTwo" onclick="javascript:setBackground();" aria-expanded="true" aria-controls="collapseTwo">
+              夜间护眼模式
+            </a>
+        </div>
+          <div id="collapseTwo" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
+          <div class="panel-body">
+            夜间模式已经开启，再次单击按钮即可关闭 
+          </div>
+        </div>
+
+        <div>
+            <a data-toggle="collapse" data-parent="#accordion" href="#collapseThree" aria-expanded="true" aria-controls="collapseThree">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;关 于&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a>
+        </div>
+         <div id="collapseThree" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingThree">
+          <div class="panel-body">
+            TEN-Z&#39;S BLOG
+          </div>
+          <div class="panel-body">
+            Copyright © 2018 ten-z All Rights Reserved.
+          </div>
+        </div>
+      </div>
+
+
+      <hr style="margin-top:0px; margin-bottom:0px; width:80%; border-top: 1px solid #000;">
+      <hr style="margin-top:2px; margin-bottom:0px; width:80%; border-top: 3px solid #000;">
+      <div class="modal-footer">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+  
+  <a id="rocket" href="#top" class=""></a>
+  <script type="text/javascript" src="/js/totop.js?v=1.0.0" async=""></script>
+  
+    <a id="menu-switch"><i class="fa fa-bars fa-lg"></i></a>
+  
+</body>
+</html>
