@@ -11,22 +11,23 @@
   
   
   
-  <meta name="description" content="经过前面四篇文章，我们已经了解了RxJava相关的一些基础。接下来，我们将进入RxJava最核心的内容—-线程调度。从Rx官网介绍来看，ReactiveX系列实现的核心功能就是异步编程，而程序层面中实现异步的核心是多线程（多进程属于操作系统层面）。">
+  <meta name="description" content="经过前面四篇文章，我们已经了解了RxJava相关的一些基础。接下来，我们将进入RxJava最核心的内容—-线程调度。从Rx官网介绍来看，ReactiveX系列实现的核心功能就是异步编程，而程序层面中实现异步的核心是多线程。本篇文章内容稍长，如果稍有困惑可直接跳到文章末尾看流程图，可能会方便理解。">
 <meta name="keywords" content="RxJava">
 <meta property="og:type" content="article">
 <meta property="og:title" content="一起读RxJava源码（五）——线程调度">
 <meta property="og:url" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/index.html">
 <meta property="og:site_name" content="TEN-Z&#39;S BLOG">
-<meta property="og:description" content="经过前面四篇文章，我们已经了解了RxJava相关的一些基础。接下来，我们将进入RxJava最核心的内容—-线程调度。从Rx官网介绍来看，ReactiveX系列实现的核心功能就是异步编程，而程序层面中实现异步的核心是多线程（多进程属于操作系统层面）。">
+<meta property="og:description" content="经过前面四篇文章，我们已经了解了RxJava相关的一些基础。接下来，我们将进入RxJava最核心的内容—-线程调度。从Rx官网介绍来看，ReactiveX系列实现的核心功能就是异步编程，而程序层面中实现异步的核心是多线程。本篇文章内容稍长，如果稍有困惑可直接跳到文章末尾看流程图，可能会方便理解。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/fangqi.jpg">
 <meta property="og:image" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/gandong.jpg">
 <meta property="og:image" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/zhuangdebucuo.jpeg">
 <meta property="og:image" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/jingdai.jpeg">
-<meta property="og:updated_time" content="2018-10-11T15:37:51.356Z">
+<meta property="og:image" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/lichengtu.png">
+<meta property="og:updated_time" content="2018-10-12T13:56:54.721Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="一起读RxJava源码（五）——线程调度">
-<meta name="twitter:description" content="经过前面四篇文章，我们已经了解了RxJava相关的一些基础。接下来，我们将进入RxJava最核心的内容—-线程调度。从Rx官网介绍来看，ReactiveX系列实现的核心功能就是异步编程，而程序层面中实现异步的核心是多线程（多进程属于操作系统层面）。">
+<meta name="twitter:description" content="经过前面四篇文章，我们已经了解了RxJava相关的一些基础。接下来，我们将进入RxJava最核心的内容—-线程调度。从Rx官网介绍来看，ReactiveX系列实现的核心功能就是异步编程，而程序层面中实现异步的核心是多线程。本篇文章内容稍长，如果稍有困惑可直接跳到文章末尾看流程图，可能会方便理解。">
 <meta name="twitter:image" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/fangqi.jpg">
   
 
@@ -199,7 +200,7 @@
     <div class="article-entry" itemprop="articleBody">
       
         <img src="/2018/08/01/一起读RxJava源码（五）——线程调度/fangqi.jpg" title="从入门到放弃">
-<p>　　经过前面四篇文章，我们已经了解了RxJava相关的一些基础。接下来，我们将进入RxJava最核心的内容—-线程调度。从Rx官网介绍来看，ReactiveX系列实现的核心功能就是异步编程，而程序层面中实现异步的核心是多线程（多进程属于操作系统层面）。</p>
+<p>　　经过前面四篇文章，我们已经了解了RxJava相关的一些基础。接下来，我们将进入RxJava最核心的内容—-线程调度。从Rx官网介绍来看，ReactiveX系列实现的核心功能就是异步编程，而程序层面中实现异步的核心是多线程。本篇文章内容稍长，如果稍有困惑可直接跳到文章末尾看流程图，可能会方便理解。</p>
 <a id="more"></a>
 <blockquote>
 <p style="color:Darkorange">版权声明：本文为博主原创文章，未经博主允许不得转载。</p>
@@ -292,7 +293,7 @@
 <p>第七步：ObservableA中OnSubscribe的call开始发送事件”hello rxjava”</p>
 <p>第八步：SubscriberB接到事件后，直接甩给SubscriberC<br>第九步：SubscriberC接收事件；通过Worker切换到主线程；在主线程中将事件传递给SubscriberD<br>第十步：SubscriberD接收事件，整体流程结束</p>
 </blockquote>
-<p><strong>根据流程我们可以简单总结为：subscribeOn在事件上行时切换线程，而observeOn是在事件下发时切换线程。</strong></p>
+<p><strong>根据流程我们可以简单总结为：subscribeOn在事件上行时切换线程，而observeOn是在事件下发时切换线程。</strong><br>自己画了张图，加深理解：<br><img src="/2018/08/01/一起读RxJava源码（五）——线程调度/lichengtu.png" title="流程图"></p>
 <h1 id="5-总结"><a href="#5-总结" class="headerlink" title="5. 总结"></a>5. 总结</h1><p>　　线程调度到这里就告一段落了，我讲的也是寥寥数语，只是把大体流程介绍了一遍。如果想仔细搞懂每一步的细节，还需要在多线程以及handler机制上下功夫。<br>　　我们经过这几篇的介绍,RxJava源码主要的逻辑基本介绍完了。下一章会介绍一些较为轻松的RxJava的具体应用，敬请期待！</p>
 
       
