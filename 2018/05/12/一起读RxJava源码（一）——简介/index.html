@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>一起读rxjava源码（一）——简介 | TEN-Z&#39;S BLOG</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  
+  <meta name="keywords" content="RxJava" />
+  
+  
+  
+  
+  <meta name="description" content="RxJava已经火了一段时间了，我的项目包括我最近看的很多项目都在用RxJava。之前学习了一些RxJava原理及源码，有了一些感悟，在此做一个系列进行总结。　　学无止境，大家加油！">
+<meta name="keywords" content="RxJava">
+<meta property="og:type" content="article">
+<meta property="og:title" content="一起读RxJava源码（一）——简介">
+<meta property="og:url" content="https://ten-z.github.io/2018/05/12/一起读RxJava源码（一）——简介/index.html">
+<meta property="og:site_name" content="TEN-Z&#39;S BLOG">
+<meta property="og:description" content="RxJava已经火了一段时间了，我的项目包括我最近看的很多项目都在用RxJava。之前学习了一些RxJava原理及源码，有了一些感悟，在此做一个系列进行总结。　　学无止境，大家加油！">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://ten-z.github.io/2018/05/12/一起读RxJava源码（一）——简介/Rxjava.jpg">
+<meta property="og:image" content="https://ten-z.github.io/2018/05/12/一起读RxJava源码（一）——简介/shashasha.jpg">
+<meta property="og:image" content="https://ten-z.github.io/2018/05/12/一起读RxJava源码（一）——简介/touleng.jpeg">
+<meta property="og:image" content="https://ten-z.github.io/2018/05/12/一起读RxJava源码（一）——简介/2_1.jpg">
+<meta property="og:image" content="https://ten-z.github.io/2018/05/12/一起读RxJava源码（一）——简介/xuexuexue.jpeg">
+<meta property="og:image" content="https://ten-z.github.io/2018/05/12/一起读RxJava源码（一）——简介/lizi.jpeg">
+<meta property="og:updated_time" content="2019-07-01T09:32:28.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="一起读RxJava源码（一）——简介">
+<meta name="twitter:description" content="RxJava已经火了一段时间了，我的项目包括我最近看的很多项目都在用RxJava。之前学习了一些RxJava原理及源码，有了一些感悟，在此做一个系列进行总结。　　学无止境，大家加油！">
+<meta name="twitter:image" content="https://ten-z.github.io/2018/05/12/一起读RxJava源码（一）——简介/Rxjava.jpg">
+  
+
+  
+
+  <link rel="icon" href="/css/images/mylogo.jpg">
+  <link rel="apple-touch-icon" href="/css/images/mylogo.jpg">
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans|Montserrat:700" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,300italic,400italic" rel="stylesheet" type="text/css">
+  <link href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet">
+  <style type="text/css">
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/9749f0/00000000000000000001008f/27/l?subset_id=2&fvd=n5) format("woff2");font-weight:500;font-style:normal;}
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/90cf9f/000000000000000000010091/27/l?subset_id=2&fvd=n7) format("woff2");font-weight:500;font-style:normal;}
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/8a5494/000000000000000000013365/27/l?subset_id=2&fvd=n4) format("woff2");font-weight:lighter;font-style:normal;}
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/d337d8/000000000000000000010095/27/l?subset_id=2&fvd=i4) format("woff2");font-weight:400;font-style:italic;}</style>
+  <link rel="stylesheet" href="/css/style.css">
+
+  <script src="/js/jquery-3.1.1.min.js"></script>
+  <script src="/js/bootstrap.js"></script>
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="/css/bootstrap.css" >
+
+  
+    <link rel="stylesheet" href="/css/dialog.css">
+  
+
+  
+
+  
+    <link rel="stylesheet" href="/css/header-post.css" >
+  
+
+  
+  
+  
+
+</head>
+
+
+
+  <body data-spy="scroll" data-target="#toc" data-offset="50">
+
+
+  
+  <div id="container">
+    <div id="wrap">
+      
+        <header>
+
+    <div id="allheader" class="navbar navbar-default navbar-static-top" role="navigation">
+        <div class="navbar-inner">
+          
+          <div class="container"> 
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+              <span class="sr-only">Toggle navigation</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+
+            
+              <a class="brand" style="
+                 margin-top: 0px;"  
+                href="#" data-toggle="modal" data-target="#myModal" >
+                  <img width="124px" height="124px" alt="Hike News" src="/css/images/mylogo.jpg">
+              </a>
+            
+            
+            <div class="navbar-collapse collapse">
+              <ul class="hnav navbar-nav">
+                
+                  <li> <a class="main-nav-link" href="/">首页</a> </li>
+                
+                  <li> <a class="main-nav-link" href="/archives">归档</a> </li>
+                
+                  <li> <a class="main-nav-link" href="/categories">分类</a> </li>
+                
+                  <li> <a class="main-nav-link" href="/tags">标签</a> </li>
+                
+                  <li> <a class="main-nav-link" href="/about">关于</a> </li>
+                
+                  <li><div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="请输入关键词..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(无标题)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div></li>
+            </div>
+          </div>
+                
+      </div>
+    </div>
+
+</header>
+
+
+
+      
+            
+      <div id="content" class="outer">
+        
+          <section id="main" style="float:none;"><article id="post-一起读RxJava源码（一）——简介" style="width: 75%; float:left;" class="article article-type-post" itemscope itemprop="blogPost" >
+  <div id="articleInner" class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="thumb" class="article-title" itemprop="name">
+      一起读RxJava源码（一）——简介
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-meta">
+      
+	<a href="/2018/05/12/一起读RxJava源码（一）——简介/" class="article-date">
+	  <time datetime="2018-05-12T07:06:21.000Z" itemprop="datePublished">2018-05-12</time>
+	</a>
+
+      
+    <a class="article-category-link" href="/categories/Android/">Android</a>
+
+      
+	<a class="article-views">
+	<span id="busuanzi_container_page_pv">
+		阅读量<span id="busuanzi_value_page_pv"></span>
+	</span>
+	</a>
+
+    </div>
+    <div class="article-entry" itemprop="articleBody">
+      
+        <img src="/2018/05/12/一起读RxJava源码（一）——简介/Rxjava.jpg" title="RxJava">
+<p>　　RxJava已经火了一段时间了，我的项目包括我最近看的很多项目都在用RxJava。之前学习了一些RxJava原理及源码，有了一些感悟，在此做一个系列进行总结。<br>　　学无止境，大家加油！</p>
+<a id="more"></a>
+<blockquote>
+<p style="color:Darkorange">版权声明：本文为博主原创文章，未经博主允许不得转载。</p>
+
+</blockquote>
+<p><strong>读前注意事项：</strong><br>1.本篇文章创作时间为2017.5.2，由于之前没有个人博客，所以现在才发出来。在发出之前做了些许修改。<br>2.本编文章基于RxJava 1.x。<br>3.由于本人是个<strong>Android搬砖工</strong>，因此本文仅限于Android上对RxJava的理解和运用，其他类型的工友能看懂主要思想和逻辑即可。<br>4.推荐几篇文章：</p>
+<blockquote>
+<ul>
+<li><p><strong>最权威：ReactiveX官网官方文档</strong><br><a href="http://reactivex.io/" target="_blank" rel="noopener">http://reactivex.io/</a></p>
+</li>
+<li><p><strong>RxJava 1.x:</strong><br>朱凯（扔物线）《给 Android 开发者的 RxJava 详解》<br>　　<a href="http://gank.io/post/560e15be2dca930e00da1083#toc_18" target="_blank" rel="noopener">http://gank.io/post/560e15be2dca930e00da1083#toc_18</a><br>张磊BARON RxJava系列1~7<br>　　<a href="https://www.jianshu.com/p/ec9849f2e510" target="_blank" rel="noopener">https://www.jianshu.com/p/ec9849f2e510</a></p>
+</li>
+<li><p><strong>RxJava 2.x:</strong><br>南尘 这可能是最好的RxJava 2.x 教程<br>　　<a href="https://www.jianshu.com/p/0cd258eecf60" target="_blank" rel="noopener">https://www.jianshu.com/p/0cd258eecf60</a></p>
+</li>
+</ul>
+</blockquote>
+<p>5.本系列文章主要侧重于RxJava基本原理和基本实现的源码解析，对RxJava各种操作符的各种用法可能不会介绍得很全，算是一篇RxJava源码解读入门级的文章。 RxJava其他各种炫酷的用法可以去拜读上面几位大神的文章，写的都很详细。如果还想更深入学习推荐阅读官方文档。</p>
+<blockquote>
+<p><strong>一起读RxJava源码系列：</strong><br><a href="https://ten-z.github.io/2018/05/12/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%B8%80%EF%BC%89%E2%80%94%E2%80%94%E7%AE%80%E4%BB%8B/">一起读RxJava源码（一）——简介</a><br><a href="https://ten-z.github.io/2018/05/27/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%BA%8C%EF%BC%89%E2%80%94%E2%80%94%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86-%E8%A7%82%E5%AF%9F%E8%80%85%E6%A8%A1%E5%BC%8F/">一起读RxJava源码（二）——基础知识:观察者模式</a><br><a href="https://ten-z.github.io/2018/06/08/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%B8%89%EF%BC%89%E2%80%94%E2%80%94RxJava%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%AE%9E%E7%8E%B0/">一起读RxJava源码（三）——RxJava的基本实现</a><br><a href="https://ten-z.github.io/2018/06/24/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E5%9B%9B%EF%BC%89%E2%80%94%E2%80%94%E8%BD%AC%E6%8D%A2%E6%93%8D%E4%BD%9C%E7%AC%A6/">一起读RxJava源码（四）——转换操作符</a><br><a href="https://ten-z.github.io/2018/08/01/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%BA%94%EF%BC%89%E2%80%94%E2%80%94%E7%BA%BF%E7%A8%8B%E8%B0%83%E5%BA%A6/">一起读RxJava源码（五）——线程调度</a><br><a href="https://ten-z.github.io/2019/07/01/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E5%85%AD%EF%BC%89%E2%80%94%E2%80%94%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%EF%BC%9A%E5%9F%BA%E4%BA%8E%E6%B3%A2%E6%B5%AA%E4%BA%8B%E4%BB%B6%E6%B5%81%E5%92%8C%E6%A8%A1%E5%9D%97%E5%8C%96%E7%9A%84%E6%80%9D%E8%B7%AF%E5%88%86%E6%9E%90RxJava/">一起读RxJava源码（六）——深入浅出：基于波浪事件流和模块化的思路分析RxJava</a></p>
+</blockquote>
+<h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>　　RxJava应该是从大概15年开始(？大概吧)，被越来越多的开发者关注并学习。至今已然成为很多公司和个人项目的首选，尤其是没有自己网络封装库的公司的首选(emmm…)。比较著名的就是各种博客论坛公众号都在介绍的<code>RxJava+Retrofit+mvp</code>。</p>
+<p>　　虽然目前<strong>RxJava 2.x</strong>已经出了一段时间了，官方也已经终止对<strong>RxJava 1.x</strong>的维护。但是我还是没有远见的写了一篇关于<strong>RxJava 1.x</strong>的文章。主要是因为在自己看源码的那个时间段里RxJava 1.x的文章最多，而RxJava 2.x的文章没有找到通俗易懂适合初学者的。因此本着初学源码，理解为上的原则，还是选择学习<strong>RxJava 1.x</strong>的源码来学习。当然，不出意外的，首先主要看了最经典的装X必读：<strong>朱凯（扔物线）</strong>写的<strong>《给 Android 开发者的 RxJava 详解》</strong>。看了N遍之后，得出了下面的结论:</p>
+<img src="/2018/05/12/一起读RxJava源码（一）——简介/shashasha.jpg" title="啥">
+<p>　　后来又拜读了<strong>张磊</strong>大神写的<strong>RxJava系列1~7</strong>，在掉了几万根秀发以后终于摸到了一些门道——大概就是我的头型还不够圆……以及RxJava源码的一些理解。于是写下了这篇文章，跟着学渣<del>装X</del>慢慢看懂RxJava。</p>
+<img src="/2018/05/12/一起读RxJava源码（一）——简介/touleng.jpeg" width="300" height="300" title="头冷">
+<h1 id="2-RxJava相关概念"><a href="#2-RxJava相关概念" class="headerlink" title="2. RxJava相关概念"></a>2. RxJava相关概念</h1><h2 id="2-1-先忽略Java，来看下Rx"><a href="#2-1-先忽略Java，来看下Rx" class="headerlink" title="2.1 先忽略Java，来看下Rx"></a>2.1 先忽略Java，来看下Rx</h2><p>　　RX，全称是ReactiveX，官网链接在上面的推荐文章里。官网上的第一句话就明确的写出了它的作用：<br><blockquote><p>An API for asynchronous programming with observable streams</p>
+<p><strong>大概翻译：一种异步编程API，使用（with介词，我觉得翻译成使用比较好）可观察流</strong></p>
+<footer><strong>Rx的官方定义</strong></footer></blockquote></p>
+<p><strong>这个定义有点抽象，但是也告诉了我们三个事情。</strong><br><strong>1、这是一个API</strong><br><strong>2、这是一个用来实现异步编程功能的API</strong><br><strong>3、实现这个功能使用的是可观察流的方式</strong></p>
+<p>下面再来看官网的第二句话和图：<br><img src="/2018/05/12/一起读RxJava源码（一）——简介/2_1.jpg" title="官网示意图"></p>
+<blockquote><p>The Observer pattern done right<br>ReactiveX is a combination of the best ideas from the Observer pattern, the Iterator pattern, and functional programming</p>
+<p><strong>大概翻译：</strong><br><strong>观察者模式的正确使用</strong><br><strong>ReactiveX是从观察者模式、迭代器模式和函数式编程的最佳思想的组合。</strong></p>
+<footer><strong>Rx定义的官方解释</strong></footer></blockquote>
+<p>　　所以，上面的可观察流可以理解为是一种观察者模式、迭代器模式和函数式编程的组合。当然起主要作用的我认为是观察者模式，毕竟<code>done right</code>。</p>
+<p>　　再来看官网的最下面一句话：<br><blockquote><p>ReactiveX is more than an API, it’s an idea and a breakthrough in programming. It has inspired several other APIs, frameworks, and even programming languages.</p>
+<p><strong>大概翻译：ReactiveX不仅仅是一个API，它是编程的一个思想和突破。它启发了其他几个API、框架，甚至是编程语言。</strong></p>
+<footer><strong>Rx的意义</strong></footer></blockquote></p>
+<p>　　瞬间高大上了有木有，把ReactiveX升华成了一种思想。思想能干什么？思想能改变世界啊……扯远了，所以这么牛X的框架，就问你：<br><img src="/2018/05/12/一起读RxJava源码（一）——简介/xuexuexue.jpeg" title="学不学"><br>　　那我们开始吧。</p>
+<h2 id="2-2-所以RxJava是什么"><a href="#2-2-所以RxJava是什么" class="headerlink" title="2.2 所以RxJava是什么"></a>2.2 所以RxJava是什么</h2><p>　　刚刚介绍了Rx，后面加上Java当然就是使用Java语言来编写和使用的Rx。官网上还有其他语言的Rx。比如：RxJS、Rx.NET、RxScala、RxSwift……。本系列的所有文章都是基于RxJava来讲解的。</p>
+<p>　　对于Rxjava是什么。<strong>大神们给的一个词是“异步”。</strong><br><blockquote><p>“RxJava is a Java VM implementation of Reactive Extensions: a library for composing asynchronous and event-based programs by using observable sequences.”</p>
+<p>大概翻译：RxJava 是Reactive Extensions在 Java VM 上的实现， 是一个用可观测序列(基于观察者模式)来组成异步的、基于事件的程序的库。<br>注：Reactive Extensions：An API for asynchronous programming with observable streams。（Reactive Extensions是用可观测流实现异步编程的API，有基于各种语言的库。RxJava是其中一种。）</p>
+<p>“It extends the observer pattern to support sequences of data/events and adds operators that allow you to compose sequences together declaratively while abstracting away concerns about things like low-level threading, synchronization, thread-safety and concurrent data structures.”<br>大概翻译：它扩展了观察者模式以支持数据/事件序列，并添加了操作符允许您声明性地将序列组合在一起，同时抽象出对诸如低级线程、同步、线程安全和并发数据结构等。</p>
+<footer><strong>RxJava在GitHub主页上的自我介绍</strong></footer></blockquote></p>
+<p>　　<strong>简单理解：异步操作库。</strong>这个库基于异步可以实现诸多功能，其中最火的莫过于响应式编程，在后面的章节里会稍微介绍一下响应式编程相关基础。</p>
+<h1 id="3-RxJava好在哪"><a href="#3-RxJava好在哪" class="headerlink" title="3. RxJava好在哪"></a>3. RxJava好在哪</h1><p>　　好在哪主要是得和别的类库比较。Android一般是和本平台上已经为开发者提供的<strong>AsyncTask</strong>,<strong>Handler</strong>等用来做异步操作的类库比较。比较的结果就是：<strong>简洁</strong>。<strong>随着程序逻辑变得越来越复杂，它依然能够保持简洁</strong>。</p>
+<blockquote><p>注：以下例子均取自大神朱凯（扔物线）的《给 Android 开发者的 RxJava 详解》一文（不包含表情包），例子确实很通俗易懂，所以本人就不胡编乱造了。直接看。</p>
+</blockquote>
+<img src="/2018/05/12/一起读RxJava源码（一）——简介/lizi.jpeg" width="300" height="300" title="例子">
+<p>　　假设有这样一个需求：界面上有一个自定义的视图<code>imageCollectorView</code>，它的作用是显示多张图片，并能使用<code>addImage(Bitmap)</code>方法来任意增加显示的图片。现在需要程序将一个给出的目录数组<code>File[] folders</code>中每个目录下的 png 图片都加载出来并显示在<code>imageCollectorView</code>中。需要注意的是，由于读取图片的这一过程较为耗时，需要放在后台执行，而图片的显示则必须在UI线程执行。常用的实现方式有多种，这里贴出其中一种：</p>
+<figure class="highlight plain"><figcaption><span>通过Thread新建线程读取图片，并通过runOnUiThread更新imageCollectorView</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">new Thread() &#123;</span><br><span class="line">    @Override</span><br><span class="line">    public void run() &#123;</span><br><span class="line">        super.run();</span><br><span class="line">        for (File folder : folders) &#123;</span><br><span class="line">            File[] files = folder.listFiles();</span><br><span class="line">            for (File file : files) &#123;</span><br><span class="line">                if (file.getName().endsWith(&quot;.png&quot;)) &#123;</span><br><span class="line">                    final Bitmap bitmap = getBitmapFromFile(file);</span><br><span class="line">                    getActivity().runOnUiThread(new Runnable() &#123;</span><br><span class="line">                        @Override</span><br><span class="line">                        public void run() &#123;</span><br><span class="line">                            imageCollectorView.addImage(bitmap);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;.start();</span><br></pre></td></tr></table></figure>
+<p>　　而如果使用 RxJava ，实现方式是这样的：<br><figure class="highlight plain"><figcaption><span>RxJava实现</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">Observable.from(folders)</span><br><span class="line">    .flatMap(new Func1&lt;File, Observable&lt;File&gt;&gt;() &#123;</span><br><span class="line">        @Override</span><br><span class="line">        public Observable&lt;File&gt; call(File file) &#123;</span><br><span class="line">            return Observable.from(file.listFiles());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;)</span><br><span class="line">    .filter(new Func1&lt;File, Boolean&gt;() &#123;</span><br><span class="line">        @Override</span><br><span class="line">        public Boolean call(File file) &#123;</span><br><span class="line">            return file.getName().endsWith(&quot;.png&quot;);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;)</span><br><span class="line">    .map(new Func1&lt;File, Bitmap&gt;() &#123;</span><br><span class="line">        @Override</span><br><span class="line">        public Bitmap call(File file) &#123;</span><br><span class="line">            return getBitmapFromFile(file);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;)</span><br><span class="line">    .subscribeOn(Schedulers.io())</span><br><span class="line">    .observeOn(AndroidSchedulers.mainThread())</span><br><span class="line">    .subscribe(new Action1&lt;Bitmap&gt;() &#123;</span><br><span class="line">        @Override</span><br><span class="line">        public void call(Bitmap bitmap) &#123;</span><br><span class="line">            imageCollectorView.addImage(bitmap);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br></pre></td></tr></table></figure></p>
+<p>　　这里代码看上去行数是变多了，但是逻辑却变得简洁了，用有文化（装X）一点的词形容叫<strong>“对仗”</strong>。RxJava 实现的是一条从上到下的链式调用，没有任何嵌套。<br>　　配合Lambda表达式使用效果拔群：<br><figure class="highlight plain"><figcaption><span>RxJava+Lambda</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Observable.from(folders)</span><br><span class="line">    .flatMap((Func1) (folder) -&gt; &#123; Observable.from(file.listFiles()) &#125;)</span><br><span class="line">    .filter((Func1) (file) -&gt; &#123; file.getName().endsWith(&quot;.png&quot;) &#125;)</span><br><span class="line">    .map((Func1) (file) -&gt; &#123; getBitmapFromFile(file) &#125;)</span><br><span class="line">    .subscribeOn(Schedulers.io())</span><br><span class="line">    .observeOn(AndroidSchedulers.mainThread())</span><br><span class="line">    .subscribe((Action1) (bitmap) -&gt; &#123; imageCollectorView.addImage(bitmap) &#125;);</span><br></pre></td></tr></table></figure></p>
+<p>　　所以， RxJava 好在哪？就好在简洁，好在那把什么复杂逻辑都能穿成一条线的简洁。</p>
+<h1 id="4-总结"><a href="#4-总结" class="headerlink" title="4. 总结"></a>4. 总结</h1><p>　　Rxjava简介到这就差不多了，相信大家都了解了Rx的作用和功能，也能感受到RxJava的优势——简洁。在进入正题之前，还有一些基础要熟悉一下。下一篇文章会对基础之一的观察者模式做一个介绍，敬请关注！</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RxJava/">RxJava</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2018/05/27/一起读RxJava源码（二）——基础知识-观察者模式/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">上一篇</strong>
+      <div class="article-nav-title">
+        
+          一起读RxJava源码（二）——基础知识:观察者模式
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2018/04/21/Jenkins-Git-Gradle-七牛-QR-Code实现Android自动打包、上传七牛并生成二维码/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">下一篇</strong>
+      <div class="article-nav-title">Android基于Jenkins+Git+Gradle+七牛云+QR-Code实现自动打包、上传七牛云并生成二维码</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+<!-- Table of Contents -->
+
+  <aside id="toc-sidebar">
+    <div id="toc" class="toc-article">
+    <strong class="toc-title">文章目录</strong>
+    
+        <ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-前言"><span class="nav-text">1. 前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-RxJava相关概念"><span class="nav-text">2. RxJava相关概念</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-先忽略Java，来看下Rx"><span class="nav-text">2.1 先忽略Java，来看下Rx</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-所以RxJava是什么"><span class="nav-text">2.2 所以RxJava是什么</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-RxJava好在哪"><span class="nav-text">3. RxJava好在哪</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-总结"><span class="nav-text">4. 总结</span></a></li></ol>
+    
+    </div>
+  </aside>
+
+
+</section>
+        
+      </div>
+      
+      <footer id="footer">
+  
+
+  <div class="container">
+      	<div class="row">
+	      <p> Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> and <a href="https://github.com/iTimeTraveler/hexo-theme-hiker" target="_blank">Hexo-theme-hiker</a> </p>
+	      <p id="copyRightEn">Copyright &copy; 2018 - 2022 TEN-Z&#39;S BLOG All Rights Reserved.</p>
+	      
+	      
+    		<p class="busuanzi_uv">
+				访客数 : <span id="busuanzi_value_site_uv"></span> |  
+				访问量 : <span id="busuanzi_value_site_pv"></span>
+		    </p>
+  		   
+		</div>
+
+		
+  </div>
+</footer>
+
+
+<!-- min height -->
+
+<script>
+    var wrapdiv = document.getElementById("wrap");
+    var contentdiv = document.getElementById("content");
+    var allheader = document.getElementById("allheader");
+
+    wrapdiv.style.minHeight = document.body.offsetHeight + "px";
+    if (allheader != null) {
+      contentdiv.style.minHeight = document.body.offsetHeight - allheader.offsetHeight - document.getElementById("footer").offsetHeight + "px";
+    } else {
+      contentdiv.style.minHeight = document.body.offsetHeight - document.getElementById("footer").offsetHeight + "px";
+    }
+</script>
+    </div>
+    <!-- <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+    <a href="/categories" class="mobile-nav-link">Categories</a>
+  
+    <a href="/tags" class="mobile-nav-link">Tags</a>
+  
+    <a href="/about" class="mobile-nav-link">About</a>
+  
+</nav> -->
+    
+
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/scripts.js"></script>
+
+
+
+
+  <script src="/js/dialog.js"></script>
+
+
+
+
+
+
+
+
+
+	<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js">
+	</script>
+
+
+
+
+
+
+  </div>
+
+  <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" style="display: none;">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="myModalLabel">设置</h2>
+      </div>
+      <hr style="margin-top:0px; margin-bottom:0px; width:80%; border-top: 3px solid #000;">
+      <hr style="margin-top:2px; margin-bottom:0px; width:80%; border-top: 1px solid #000;">
+
+
+      <div class="modal-body">
+          <div style="margin:6px;">
+            <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" onclick="javascript:setFontSize();" aria-expanded="true" aria-controls="collapseOne">
+              正文字号大小
+            </a>
+          </div>
+          <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+          <div class="panel-body">
+            您已调整页面字体大小
+          </div>
+        </div>
+      
+
+
+          <div style="margin:6px;">
+            <a data-toggle="collapse" data-parent="#accordion" href="#collapseTwo" onclick="javascript:setBackground();" aria-expanded="true" aria-controls="collapseTwo">
+              夜间护眼模式
+            </a>
+        </div>
+          <div id="collapseTwo" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
+          <div class="panel-body">
+            夜间模式已经开启，再次单击按钮即可关闭 
+          </div>
+        </div>
+
+        <div>
+            <a data-toggle="collapse" data-parent="#accordion" href="#collapseThree" aria-expanded="true" aria-controls="collapseThree">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;关 于&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a>
+        </div>
+         <div id="collapseThree" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingThree">
+          <div class="panel-body">
+            TEN-Z&#39;S BLOG
+          </div>
+          <div class="panel-body">
+            Copyright © 2022 ten-z All Rights Reserved.
+          </div>
+        </div>
+      </div>
+
+
+      <hr style="margin-top:0px; margin-bottom:0px; width:80%; border-top: 1px solid #000;">
+      <hr style="margin-top:2px; margin-bottom:0px; width:80%; border-top: 3px solid #000;">
+      <div class="modal-footer">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+  
+  <a id="rocket" href="#top" class=""></a>
+  <script type="text/javascript" src="/js/totop.js?v=1.0.0" async=""></script>
+  
+    <a id="menu-switch"><i class="fa fa-bars fa-lg"></i></a>
+  
+</body>
+</html>

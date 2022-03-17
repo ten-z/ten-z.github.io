@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>一起读rxjava源码（五）——线程调度 | TEN-Z&#39;S BLOG</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  
+  <meta name="keywords" content="RxJava" />
+  
+  
+  
+  
+  <meta name="description" content="经过前面四篇文章，我们已经了解了RxJava相关的一些基础。接下来，我们将进入RxJava最核心的内容—-线程调度。从Rx官网介绍来看，ReactiveX系列实现的核心功能就是异步编程，而程序层面中实现异步的核心是多线程。本篇文章内容稍长，如果稍有困惑可直接跳到文章末尾看流程图，可能会方便理解。">
+<meta name="keywords" content="RxJava">
+<meta property="og:type" content="article">
+<meta property="og:title" content="一起读RxJava源码（五）——线程调度">
+<meta property="og:url" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/index.html">
+<meta property="og:site_name" content="TEN-Z&#39;S BLOG">
+<meta property="og:description" content="经过前面四篇文章，我们已经了解了RxJava相关的一些基础。接下来，我们将进入RxJava最核心的内容—-线程调度。从Rx官网介绍来看，ReactiveX系列实现的核心功能就是异步编程，而程序层面中实现异步的核心是多线程。本篇文章内容稍长，如果稍有困惑可直接跳到文章末尾看流程图，可能会方便理解。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/fangqi.jpg">
+<meta property="og:image" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/gandong.jpg">
+<meta property="og:image" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/zhuangdebucuo.jpeg">
+<meta property="og:image" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/jingdai.jpeg">
+<meta property="og:image" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/lichengtu.png">
+<meta property="og:updated_time" content="2019-07-01T09:35:04.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="一起读RxJava源码（五）——线程调度">
+<meta name="twitter:description" content="经过前面四篇文章，我们已经了解了RxJava相关的一些基础。接下来，我们将进入RxJava最核心的内容—-线程调度。从Rx官网介绍来看，ReactiveX系列实现的核心功能就是异步编程，而程序层面中实现异步的核心是多线程。本篇文章内容稍长，如果稍有困惑可直接跳到文章末尾看流程图，可能会方便理解。">
+<meta name="twitter:image" content="https://ten-z.github.io/2018/08/01/一起读RxJava源码（五）——线程调度/fangqi.jpg">
+  
+
+  
+
+  <link rel="icon" href="/css/images/mylogo.jpg">
+  <link rel="apple-touch-icon" href="/css/images/mylogo.jpg">
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans|Montserrat:700" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,300italic,400italic" rel="stylesheet" type="text/css">
+  <link href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet">
+  <style type="text/css">
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/9749f0/00000000000000000001008f/27/l?subset_id=2&fvd=n5) format("woff2");font-weight:500;font-style:normal;}
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/90cf9f/000000000000000000010091/27/l?subset_id=2&fvd=n7) format("woff2");font-weight:500;font-style:normal;}
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/8a5494/000000000000000000013365/27/l?subset_id=2&fvd=n4) format("woff2");font-weight:lighter;font-style:normal;}
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/d337d8/000000000000000000010095/27/l?subset_id=2&fvd=i4) format("woff2");font-weight:400;font-style:italic;}</style>
+  <link rel="stylesheet" href="/css/style.css">
+
+  <script src="/js/jquery-3.1.1.min.js"></script>
+  <script src="/js/bootstrap.js"></script>
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="/css/bootstrap.css" >
+
+  
+    <link rel="stylesheet" href="/css/dialog.css">
+  
+
+  
+
+  
+    <link rel="stylesheet" href="/css/header-post.css" >
+  
+
+  
+  
+  
+
+</head>
+
+
+
+  <body data-spy="scroll" data-target="#toc" data-offset="50">
+
+
+  
+  <div id="container">
+    <div id="wrap">
+      
+        <header>
+
+    <div id="allheader" class="navbar navbar-default navbar-static-top" role="navigation">
+        <div class="navbar-inner">
+          
+          <div class="container"> 
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+              <span class="sr-only">Toggle navigation</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+
+            
+              <a class="brand" style="
+                 margin-top: 0px;"  
+                href="#" data-toggle="modal" data-target="#myModal" >
+                  <img width="124px" height="124px" alt="Hike News" src="/css/images/mylogo.jpg">
+              </a>
+            
+            
+            <div class="navbar-collapse collapse">
+              <ul class="hnav navbar-nav">
+                
+                  <li> <a class="main-nav-link" href="/">首页</a> </li>
+                
+                  <li> <a class="main-nav-link" href="/archives">归档</a> </li>
+                
+                  <li> <a class="main-nav-link" href="/categories">分类</a> </li>
+                
+                  <li> <a class="main-nav-link" href="/tags">标签</a> </li>
+                
+                  <li> <a class="main-nav-link" href="/about">关于</a> </li>
+                
+                  <li><div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="请输入关键词..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(无标题)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div></li>
+            </div>
+          </div>
+                
+      </div>
+    </div>
+
+</header>
+
+
+
+      
+            
+      <div id="content" class="outer">
+        
+          <section id="main" style="float:none;"><article id="post-一起读RxJava源码（五）——线程调度" style="width: 75%; float:left;" class="article article-type-post" itemscope itemprop="blogPost" >
+  <div id="articleInner" class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="thumb" class="article-title" itemprop="name">
+      一起读RxJava源码（五）——线程调度
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-meta">
+      
+	<a href="/2018/08/01/一起读RxJava源码（五）——线程调度/" class="article-date">
+	  <time datetime="2018-08-01T15:28:14.000Z" itemprop="datePublished">2018-08-01</time>
+	</a>
+
+      
+    <a class="article-category-link" href="/categories/Android/">Android</a>
+
+      
+	<a class="article-views">
+	<span id="busuanzi_container_page_pv">
+		阅读量<span id="busuanzi_value_page_pv"></span>
+	</span>
+	</a>
+
+    </div>
+    <div class="article-entry" itemprop="articleBody">
+      
+        <img src="/2018/08/01/一起读RxJava源码（五）——线程调度/fangqi.jpg" title="从入门到放弃">
+<p>　　经过前面四篇文章，我们已经了解了RxJava相关的一些基础。接下来，我们将进入RxJava最核心的内容—-线程调度。从Rx官网介绍来看，ReactiveX系列实现的核心功能就是异步编程，而程序层面中实现异步的核心是多线程。本篇文章内容稍长，如果稍有困惑可直接跳到文章末尾看流程图，可能会方便理解。</p>
+<a id="more"></a>
+<blockquote>
+<p style="color:Darkorange">版权声明：本文为博主原创文章，未经博主允许不得转载。</p>
+
+<p><strong>一起读RxJava源码系列：</strong><br><a href="https://ten-z.github.io/2018/05/12/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%B8%80%EF%BC%89%E2%80%94%E2%80%94%E7%AE%80%E4%BB%8B/">一起读RxJava源码（一）——简介</a><br><a href="https://ten-z.github.io/2018/05/27/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%BA%8C%EF%BC%89%E2%80%94%E2%80%94%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86-%E8%A7%82%E5%AF%9F%E8%80%85%E6%A8%A1%E5%BC%8F/">一起读RxJava源码（二）——基础知识:观察者模式</a><br><a href="https://ten-z.github.io/2018/06/08/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%B8%89%EF%BC%89%E2%80%94%E2%80%94RxJava%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%AE%9E%E7%8E%B0/">一起读RxJava源码（三）——RxJava的基本实现</a><br><a href="https://ten-z.github.io/2018/06/24/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E5%9B%9B%EF%BC%89%E2%80%94%E2%80%94%E8%BD%AC%E6%8D%A2%E6%93%8D%E4%BD%9C%E7%AC%A6/">一起读RxJava源码（四）——转换操作符</a><br><a href="https://ten-z.github.io/2018/08/01/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%BA%94%EF%BC%89%E2%80%94%E2%80%94%E7%BA%BF%E7%A8%8B%E8%B0%83%E5%BA%A6/">一起读RxJava源码（五）——线程调度</a><br><a href="https://ten-z.github.io/2019/07/01/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E5%85%AD%EF%BC%89%E2%80%94%E2%80%94%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%EF%BC%9A%E5%9F%BA%E4%BA%8E%E6%B3%A2%E6%B5%AA%E4%BA%8B%E4%BB%B6%E6%B5%81%E5%92%8C%E6%A8%A1%E5%9D%97%E5%8C%96%E7%9A%84%E6%80%9D%E8%B7%AF%E5%88%86%E6%9E%90RxJava/">一起读RxJava源码（六）——深入浅出：基于波浪事件流和模块化的思路分析RxJava</a></p>
+</blockquote>
+<h1 id="1-线程调度的核心：Scheduler"><a href="#1-线程调度的核心：Scheduler" class="headerlink" title="1. 线程调度的核心：Scheduler"></a>1. 线程调度的核心：Scheduler</h1><p>　　Scheduler本身就是调度程序、调度器的意思。这里把它称为“核心”是因为RxJava实现线程调度主要方式是将Scheduler作为参数传入相关操作符中实现的，比如一会要讲的<code>SubscribeOn</code>和<code>ObserveOn</code>。而在Rx官网介绍中，Scheduler本身就能实现多线程的相关功能。下面我们一起来看下。</p>
+<h2 id="1-1-Scheduler介绍"><a href="#1-1-Scheduler介绍" class="headerlink" title="1.1 Scheduler介绍"></a>1.1 Scheduler介绍</h2><p>　　Scheduler是线程控制器，RxJava通过它来指定每一段代码应该运行在什么样的线程。RxJava已经内置了几个Scheduler，它们已经适合大多数的使用场景：</p>
+<blockquote>
+<ul>
+<li>Schedulers.immediate()：直接在当前线程运行，相当于不指定线程。这是默认的Scheduler。</li>
+<li>Schedulers.newThread()：总是启用新线程，并在新线程执行操作。</li>
+<li>Schedulers.io()：I/O 操作（读写文件、读写数据库、网络信息交互等）所使用的Scheduler。行为模式和newThread()差不多，区别在于io()的内部实现是是用一个无数量上限的线程池，可以重用空闲的线程，因此多数情况下io()比newThread()更有效率。不要把计算工作放在io()中，可以避免创建不必要的线程。</li>
+<li>Schedulers.computation()：计算所使用的Scheduler。这个计算指的是CPU密集型计算，即不会被I/O等操作限制性能的操作，例如图形的计算。这个Scheduler使用的固定的线程池，大小为CPU核数。不要把I/O操作放在computation()中，否则I/O操作的等待时间会浪费CPU。</li>
+<li>AndroidSchedulers.mainThread()：Android专用，它指定的操作将在Android主线程运行。</li>
+</ul>
+</blockquote>
+<p>　　RxJava最常规的线程控制就是通过这几个Scheduler配合<code>subscribeOn()</code>和<code>observeOn()</code>两个方法来对线程进行控制。</p>
+<h2 id="1-2-单独使用Scheduler"><a href="#1-2-单独使用Scheduler" class="headerlink" title="1.2 单独使用Scheduler"></a>1.2 单独使用Scheduler</h2><p>　　除了将Scheduler传递给RxJava运算符之外，我们还可以单独使用Scheduler来安排自己的订阅工作。可以使用RxJava的Scheduler.Worker类实现Java中利用Thread实现的多线程功能：<br><figure class="highlight plain"><figcaption><span>Scheduler实现多线程</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">Scheduler.Worker worker = Schedulers.newThread().createWorker();</span><br><span class="line">worker.schedule(new Action0() &#123;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void call() &#123;</span><br><span class="line">        yourWork();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;);</span><br><span class="line">// some time later...</span><br><span class="line">worker.unsubscribe();</span><br></pre></td></tr></table></figure></p>
+<p>　　在执行worker.schedule时会在新线程中执行call()中的代码。并可以通过<code>worker.unsubscribe()</code>终止线程。</p>
+<p>　　之外，还可以实现延迟执行和周期执行：</p>
+<blockquote>
+<ul>
+<li><p>延时500ms后执行</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">someScheduler.schedule(someAction, 500, TimeUnit.MILLISECONDS);</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>延时500ms后，每隔250ms执行一次</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">someScheduler.schedulePeriodically(someAction，500,250，TimeUnit.MILLISECONDS);</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</blockquote>
+<h1 id="2-线程调度的基本实现"><a href="#2-线程调度的基本实现" class="headerlink" title="2. 线程调度的基本实现"></a>2. 线程调度的基本实现</h1><p>　　上一小节中提到过，RxJava实现线程控制主要是通过Scheduler配合<code>subscribeOn()</code>和<code>observeOn()</code>两个操作符来实现。下面简单介绍下这两个操作符的功能：</p>
+<blockquote>
+<p><strong>subscribeOn():</strong> 指定subscribe()所发生的线程，一方面是Observable.OnSubscribe被激活时所处的线程，或者叫做事件产生的线程。另一方面是观察者接收前的所处的线程，或者称为事件下发的线程。<br><strong>observeOn():</strong> 指定Subscriber观察者所运行在的线程。或者叫做事件消费的线程。</p>
+</blockquote>
+<p>　　定义如果没看太明白的话可以结合接下来的示例，下面是线程调度最基本的实现方式：<br><figure class="highlight plain"><figcaption><span>线程调度基本实现</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">Observable.create(new Observable.OnSubscribe&lt;String&gt;() &#123;</span><br><span class="line">    @Override</span><br><span class="line">    public void call(Subscriber&lt;? super String&gt; subscriber) &#123;</span><br><span class="line">        subscriber.onNext(&quot;hello rxjava&quot;);</span><br><span class="line">        subscriber.onCompleted();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;)</span><br><span class="line">        .subscribeOn(Schedulers.io())</span><br><span class="line">        .observeOn(AndroidSchedulers.mainThread())</span><br><span class="line">        .subscribe(new Subscriber&lt;String&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public void onCompleted() &#123;</span><br><span class="line">                Log.i(&quot;tag&quot;, &quot;onCompleted&quot;);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            @Override</span><br><span class="line">            public void onError(Throwable e) &#123;</span><br><span class="line"></span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            @Override</span><br><span class="line">            public void onNext(String s) &#123;</span><br><span class="line">                Log.i(&quot;tag&quot;, &quot;onNext=&quot; + s);</span><br><span class="line">                textView.setText(s);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br></pre></td></tr></table></figure></p>
+<p>　　跟前几篇文章中基本方式比较，仅仅是多了<code>.subscribeOn(Schedulers.io())</code>和<code>.observeOn(AndroidSchedulers.mainThread())</code>两句。<br>　　在上面这段代码中，由于在create()后指定了subscribeOn(Schedulers.io())，Observable.OnSubscribe中call回调中的内容会在IO线程执行，即内容为”hello rxjava”的事件会在IO线程发出。而由于在subscribe()之前observeOn(AndroidScheculers.mainThread())的指定，使得Subscriber中给textView赋值的操作（UI的操作）会在主线程中执行。</p>
+<p>　　通过对上面例子的解释可以看出，RxJava切换线程仅仅通过添加subscribeOn和observeOn操作符就能实现，并且可以通过多次调用observeOn实现多次切换线程。<br>　　能如此方便的切换线程，简直业界良心啊有木有。对于一名android搬砖工而言，可以不用纠结AsyncTask、线程和handler了。使用RxJava仅仅通过两个操作符就能实现线程间的切换、调度、可控，并大大减少代码量，增加可读性……<br><img src="/2018/08/01/一起读RxJava源码（五）——线程调度/gandong.jpg" title="感动"></p>
+<p>　　当然，到此仅仅是介绍了RxJava实现线程调度的基本操作，下面我们就来分析分析源码，看看是怎么实现的。</p>
+<h1 id="3-线程调度的源码解析——基于事件流"><a href="#3-线程调度的源码解析——基于事件流" class="headerlink" title="3. 线程调度的源码解析——基于事件流"></a>3. 线程调度的源码解析——基于事件流</h1><p>　　下面的讲解还是以线程调度的基本实现为例，<strong>但是这回我们讲解的顺序不按照绝大部分博客的思路——按代码顺序从上至下的方式进行。</strong>因为经过前两篇文章对基础源码的分析，我们发现RxJava在执行到subscribe()才会去产生事件并下发，<strong>所以这里我们以事件的产生到接收流程为顺序进行源码逻辑的分析</strong>，个人认为会更好理解一点。请再回顾一下刚才<strong>线程调度基本实现</strong>的代码，找到建立依赖关系的地方。<br><img src="/2018/08/01/一起读RxJava源码（五）——线程调度/zhuangdebucuo.jpeg" title="继续努力"></p>
+<h2 id="3-1-observeOn-源码解析（一）"><a href="#3-1-observeOn-源码解析（一）" class="headerlink" title="3.1 observeOn()源码解析（一）"></a>3.1 observeOn()源码解析（一）</h2><p>　　先来分析下在subscribe()方法之前调用的observeOn()。这里是建立关系的开始，也是事件的开始。<br>　　先来看下observeOn()源码：<br><figure class="highlight plain"><figcaption><span>observeOn()源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">public final Observable&lt;T&gt; observeOn(Scheduler scheduler) &#123;</span><br><span class="line">    return observeOn(scheduler, RxRingBuffer.SIZE);</span><br><span class="line">&#125;</span><br><span class="line">……</span><br><span class="line">public final Observable&lt;T&gt; observeOn(Scheduler scheduler, int bufferSize) &#123;</span><br><span class="line">    return observeOn(scheduler, false, bufferSize);</span><br><span class="line">&#125;</span><br><span class="line">……</span><br><span class="line">public final Observable&lt;T&gt; observeOn(Scheduler scheduler, boolean delayError, int bufferSize) &#123;</span><br><span class="line">    if (this instanceof ScalarSynchronousObservable) &#123;</span><br><span class="line">        return ((ScalarSynchronousObservable&lt;T&gt;)this).scalarScheduleOn(scheduler);</span><br><span class="line">    &#125;</span><br><span class="line">    return lift(new OperatorObserveOn&lt;T&gt;(scheduler, delayError, bufferSize));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　经历了层层调用后我们终于看到了observeOn()核心的东西，它调用了一个lift()方法。在上一篇文章最后我简单的介绍了一下：map原理的本质是lift。来看下lift()的源码:<br><figure class="highlight plain"><figcaption><span>lift()源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">public final &lt;R&gt; Observable&lt;R&gt; lift(final Operator&lt;? extends R, ? super T&gt; operator) &#123;</span><br><span class="line">    return unsafeCreate(new OnSubscribeLift&lt;T, R&gt;(onSubscribe, operator));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　可以看到和map()是几乎一模一样了，所以和map原理一样，lift本质也是创建了一个新的Observable。跟前面的文章一样，这里记为ObservableC……为什么是C，因为B在下一小节。这个ObservableC传入的OnSubscribe是一个OnSubscribeLift。下面就来看下这个OnSubscribeLift：<br><figure class="highlight plain"><figcaption><span>OnSubscribeLift源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">public final class OnSubscribeLift&lt;T, R&gt; implements OnSubscribe&lt;R&gt; &#123;</span><br><span class="line"></span><br><span class="line">    final OnSubscribe&lt;T&gt; parent;</span><br><span class="line"></span><br><span class="line">    final Operator&lt;? extends R, ? super T&gt; operator;</span><br><span class="line"></span><br><span class="line">    public OnSubscribeLift(OnSubscribe&lt;T&gt; parent, Operator&lt;? extends R, ? super T&gt; operator) &#123;</span><br><span class="line">        this.parent = parent;</span><br><span class="line">        this.operator = operator;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void call(Subscriber&lt;? super R&gt; o) &#123;</span><br><span class="line">        try &#123;</span><br><span class="line">            Subscriber&lt;? super T&gt; st = RxJavaHooks.onObservableLift(operator).call(o);</span><br><span class="line">            try &#123;</span><br><span class="line">                // new Subscriber created and being subscribed with so &apos;onStart&apos; it</span><br><span class="line">                st.onStart();</span><br><span class="line">                parent.call(st);</span><br><span class="line">            &#125; catch (Throwable e) &#123;</span><br><span class="line">               </span><br><span class="line">                Exceptions.throwIfFatal(e);</span><br><span class="line">                st.onError(e);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; catch (Throwable e) &#123;</span><br><span class="line">            Exceptions.throwIfFatal(e);</span><br><span class="line">            </span><br><span class="line">            o.onError(e);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　所以综上，当程序执行到<code>observeOn(AndroidSchedulers.mainThread()).subscribe()</code>，实际本质是在执行<strong>ObservableC.subscribe(new SubscriberD)</strong>。以后的逻辑就不多说了，相信看了前面两篇文章到这里基础应该十分扎实了。看下ObservableC——OnSubscribeLift的call()方法，<code>RxJavaHooks.onObservableLift(operator)</code>实际上就是将传入的operator返回了。并且调用了operator.call。这里的operator实际上是lift传入的参数OperatorObserveOn。下面来看下OperatorObserveOn.call：<br><figure class="highlight plain"><figcaption><span>OperatorObserveOn的call方法</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">public Subscriber&lt;? super T&gt; call(Subscriber&lt;? super T&gt; child) &#123; </span><br><span class="line">... </span><br><span class="line">    ObserveOnSubscriber&lt;T&gt; parent = new ObserveOnSubscriber&lt;T&gt;(scheduler, child, delayError, bufferSize); </span><br><span class="line"></span><br><span class="line">    parent.init();</span><br><span class="line"></span><br><span class="line">    return parent; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　也是跟map一样，初始化了一个SubscriberC——ObserveOnSubscriber并调用init进行了初始化。下一步，回到OnSubscribeLift.Call中继续执行parent.call(st),也是就是调用了前一级Observable对应OnSubscriber.call(st)。注意这里和map有一点<strong>形式上的不一样</strong>，说是形式上是因为map这里是这样的：source.unsafeSubscribe(parent)，形式上是将上一级的Observable和本级的MapSubscriber建立了观察依赖，<strong>但实际起作用的其实是建立依赖后调用上一级的Observable的OnSubscriber.call,这里和observeOn()其实本质又一样了</strong>。<br>因此，这里也可以看成执行了下面一句：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ObservableB.subscribe(SubscriberC)</span><br></pre></td></tr></table></figure></p>
+<p>于是，根据基本调用逻辑，事件又往上一级ObservableB去了。</p>
+<h2 id="3-2-subscribeOn-源码解析（一）"><a href="#3-2-subscribeOn-源码解析（一）" class="headerlink" title="3.2 subscribeOn()源码解析（一）"></a>3.2 subscribeOn()源码解析（一）</h2><p>　　在线程调度的基本实现的例子中，在observeOn()方法之前调用的就是subscribeOn(Schedulers.io())，所以这一小节，我们来看下subscribeOn()的源码。<br><figure class="highlight plain"><figcaption><span>subscribeOn()源码1</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">public final Observable&lt;T&gt; subscribeOn(Scheduler scheduler) &#123;</span><br><span class="line">    return subscribeOn(scheduler, !(this.onSubscribe instanceof OnSubscribeCreate));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　subscribeOn()调用了一个两个参数的subscribeOn方法，我们继续：<br><figure class="highlight plain"><figcaption><span>subscribeOn()源码2</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">public final Observable&lt;T&gt; subscribeOn(Scheduler scheduler, boolean requestOn) &#123;</span><br><span class="line">    if (this instanceof ScalarSynchronousObservable) &#123;</span><br><span class="line">        return ((ScalarSynchronousObservable&lt;T&gt;)this).scalarScheduleOn(scheduler);</span><br><span class="line">    &#125;</span><br><span class="line">    return unsafeCreate(new OperatorSubscribeOn&lt;T&gt;(this, scheduler, requestOn));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　重点在最后一句，如果你看了上一篇map()的源码解析，应该有印象：unsafeCreate()方法会创建一个新的被观察者Observable。由此可以预见，subscribeOn()的执行流程应该和map()差不多。这里会创建一个新的被观察者，记为ObservableB。传入的对应的OnSubscribe就是OperatorSubscribeOn。<br><figure class="highlight plain"><figcaption><span>OperatorSubscribeOn源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br></pre></td><td class="code"><pre><span class="line">public final class OperatorSubscribeOn&lt;T&gt; implements OnSubscribe&lt;T&gt; &#123;</span><br><span class="line"></span><br><span class="line">    final Scheduler scheduler;</span><br><span class="line">    final Observable&lt;T&gt; source;</span><br><span class="line">    final boolean requestOn;</span><br><span class="line"></span><br><span class="line">    public OperatorSubscribeOn(Observable&lt;T&gt; source, Scheduler scheduler, boolean requestOn) &#123;</span><br><span class="line">        this.scheduler = scheduler;</span><br><span class="line">        this.source = source;</span><br><span class="line">        this.requestOn = requestOn;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void call(final Subscriber&lt;? super T&gt; subscriber) &#123;</span><br><span class="line">        final Worker inner = scheduler.createWorker();</span><br><span class="line"></span><br><span class="line">        SubscribeOnSubscriber&lt;T&gt; parent = new SubscribeOnSubscriber&lt;T&gt;(subscriber, requestOn, inner, source);</span><br><span class="line">        subscriber.add(parent);</span><br><span class="line">        subscriber.add(inner);</span><br><span class="line"></span><br><span class="line">        inner.schedule(parent);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    static final class SubscribeOnSubscriber&lt;T&gt; extends Subscriber&lt;T&gt; implements Action0 &#123;</span><br><span class="line"></span><br><span class="line">        final Subscriber&lt;? super T&gt; actual;</span><br><span class="line">        final boolean requestOn;</span><br><span class="line">        final Worker worker;</span><br><span class="line">        Observable&lt;T&gt; source;</span><br><span class="line">        Thread t;</span><br><span class="line"></span><br><span class="line">        SubscribeOnSubscriber(Subscriber&lt;? super T&gt; actual, boolean requestOn, Worker worker, Observable&lt;T&gt; source) &#123;</span><br><span class="line">            this.actual = actual;</span><br><span class="line">            this.requestOn = requestOn;</span><br><span class="line">            this.worker = worker;</span><br><span class="line">            this.source = source;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void onNext(T t) &#123;</span><br><span class="line">            actual.onNext(t);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void onError(Throwable e) &#123;</span><br><span class="line">            try &#123;</span><br><span class="line">                actual.onError(e);</span><br><span class="line">            &#125; finally &#123;</span><br><span class="line">                worker.unsubscribe();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void onCompleted() &#123;</span><br><span class="line">            try &#123;</span><br><span class="line">                actual.onCompleted();</span><br><span class="line">            &#125; finally &#123;</span><br><span class="line">                worker.unsubscribe();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void call() &#123;</span><br><span class="line">            Observable&lt;T&gt; src = source;</span><br><span class="line">            source = null;</span><br><span class="line">            t = Thread.currentThread();</span><br><span class="line">            src.unsafeSubscribe(this);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void setProducer(final Producer p) &#123;</span><br><span class="line">            actual.setProducer(new Producer() &#123;</span><br><span class="line">                @Override</span><br><span class="line">                public void request(final long n) &#123;</span><br><span class="line">                    if (t == Thread.currentThread() || !requestOn) &#123;</span><br><span class="line">                        p.request(n);</span><br><span class="line">                    &#125; else &#123;</span><br><span class="line">                        worker.schedule(new Action0() &#123;</span><br><span class="line">                            @Override</span><br><span class="line">                            public void call() &#123;</span><br><span class="line">                                p.request(n);</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　通过上一小节我们知道事件经过observeOn后，会先调用ObservableB的OnSubscribe的call方法，这里即为OperatorSubscribeOn的call方法。</p>
+<blockquote>
+<p><strong>先简单过一下OperatorSubscribeOn的call中的代码的大概流程：</strong>首先通过scheduler.createWorker()构建了一个Worker；然后用传进来的subscriber构造了一个新的SubscribeOnSubscriber，记为subscriberB，并将subscriberB丢到Worker.schedule()创建的新线程来处理；新线程中，Worker.schedule(subscriberB)会执行subscriberB中的call方法，在call中会用上一级Observable去订阅观察者subscriberB，即ObservableA.subscribe(subscriberB)。<br><strong>提炼一下：切换线程，添加订阅ObservableA.subscribe(subscriberB)。</strong></p>
+</blockquote>
+<p><strong>下面是详细的解析：</strong><br><strong>第一步：</strong><br><strong>final Worker inner = scheduler.createWorker();</strong><br>　　从上面的流程来看，这个Worker就是线程调度的关键，从前面1.2中的例子也能看出来，Worker本身就是用来创建新线程的。而在这个例子中，创建Worker的scheduler往上回溯去查找发现就是subscribeOn(Schedulers.io())中的Schedulers.io()，就是通过它创建了我们前面提到的Worker。所以下面来看看Schedulers.io()的实现：<br><figure class="highlight plain"><figcaption><span>Schedulers.io()源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">public static Scheduler io() &#123;</span><br><span class="line">    return RxJavaHooks.onIOScheduler(getInstance().ioScheduler);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　RxJavaHooks.onIOScheduler和绝大多数RxJavaHooks里的方法一样，把传入的scheduler返回了。这里的scheduler传入了一个<code>getInstance().ioScheduler</code>，看来是一个单例类，去它的私有构造器中找到ioScheduler的初始化：<br><figure class="highlight plain"><figcaption><span>ioScheduler的初始化</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">private Schedulers() &#123; </span><br><span class="line">    ... </span><br><span class="line">    Scheduler io = hook.getIOScheduler(); </span><br><span class="line">    if (io != null) &#123; </span><br><span class="line">        ioScheduler = io;</span><br><span class="line">     &#125; </span><br><span class="line">    else &#123;</span><br><span class="line">         ioScheduler = RxJavaSchedulersHook.createIoScheduler();</span><br><span class="line">     &#125; </span><br><span class="line">    ... </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>继续看RxJavaSchedulersHook.createIoScheduler()：<br><figure class="highlight plain"><figcaption><span>createIoScheduler()源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">public static Scheduler createIoScheduler() &#123;</span><br><span class="line">    return createIoScheduler(new RxThreadFactory(&quot;RxIoScheduler-&quot;));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public static Scheduler createIoScheduler(ThreadFactory threadFactory) &#123;</span><br><span class="line">    if (threadFactory == null) &#123;</span><br><span class="line">        throw new NullPointerException(&quot;threadFactory == null&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    return new CachedThreadScheduler(threadFactory);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　可以看到返回了一个CachedThreadScheduler。也就是说subscribeOn(Schedulers.io())中传入的scheduler实际是这个CachedThreadScheduler。Worker也是CachedThreadScheduler的createWorker()方法创建的：<br><figure class="highlight plain"><figcaption><span>createWorker()源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">@Override</span><br><span class="line">public Worker createWorker() &#123;</span><br><span class="line">    return new EventLoopWorker(pool.get());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　这里返回了EventLoopWorker，OperatorSubscribeOn的call中第一句话的inner引用持有的Worker。用了这么长的篇幅终于把第一句解析完了，可见理解线程调度还是有一定难度的。下面的工作应该就是根据Worker创建线程了。</p>
+<p><strong>第二步：</strong><br><strong>SubscribeOnSubscriber<t> parent = new SubscribeOnSubscriber<t>(subscriber, requestOn, inner, source);</t></t></strong><br>　　继续到OperatorSubscribeOn源码解析上来。第二步就是普通的基本调用的套路：创建出subscriberB。具体就不解释了，可以参考map的讲解来看。</p>
+<p><strong>第三步：</strong><br><strong>inner.schedule(parent);</strong><br>　　第一步我们知道inner引用的对象实际是EventLoopWorker，来看下EventLoopWorker的schedule方法：<br><figure class="highlight plain"><figcaption><span>EventLoopWorker的schedule源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">@Override</span><br><span class="line">    public Subscription schedule(Action0 action) &#123;</span><br><span class="line">        return schedule(action, 0, null);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public Subscription schedule(final Action0 action, long delayTime, TimeUnit unit) &#123;</span><br><span class="line">	...</span><br><span class="line">        ScheduledAction s = threadWorker.scheduleActual(new Action0() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public void call() &#123;</span><br><span class="line">                if (isUnsubscribed()) &#123;</span><br><span class="line">                    return;</span><br><span class="line">                &#125;</span><br><span class="line">                action.call();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, delayTime, unit);</span><br><span class="line">        innerSubscription.add(s);</span><br><span class="line">        s.addParent(innerSubscription);</span><br><span class="line">        return s;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　看到它调用了ThreadWorker的scheduleActual()方法。这里的ThreadWorker引用的对象是NewThreadWorker，下面是它的scheduleActual():<br><figure class="highlight plain"><figcaption><span>NewThreadWorker的scheduleActual()源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">public ScheduledAction scheduleActual(final Action0 action, long delayTime, TimeUnit unit) &#123;</span><br><span class="line">    Action0 decoratedAction = RxJavaHooks.onScheduledAction(action);</span><br><span class="line">    ScheduledAction run = new ScheduledAction(decoratedAction);</span><br><span class="line">    Future&lt;?&gt; f;</span><br><span class="line">    if (delayTime &lt;= 0) &#123;</span><br><span class="line">        f = executor.submit(run);</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        f = executor.schedule(run, delayTime, unit);</span><br><span class="line">    &#125;</span><br><span class="line">    run.add(f);</span><br><span class="line"></span><br><span class="line">    return run;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　scheduleActual()中的ScheduledAction实现了Runnable接口，通过线程池executor切换了线程。顺便一提，可以在NewThreadWorker构造器中找到executor的初始化：<br><figure class="highlight plain"><figcaption><span>NewThreadWorker源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">public NewThreadWorker(ThreadFactory threadFactory) &#123;</span><br><span class="line">    ScheduledExecutorService exec = Executors.newScheduledThreadPool(1, threadFactory);</span><br><span class="line"></span><br><span class="line">    boolean cancelSupported = tryEnableCancelPolicy(exec);</span><br><span class="line">    if (!cancelSupported &amp;&amp; exec instanceof ScheduledThreadPoolExecutor) &#123;</span><br><span class="line">        registerExecutor((ScheduledThreadPoolExecutor)exec);</span><br><span class="line">    &#125;</span><br><span class="line">    executor = exec;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　可以看到这里是一个容量为1的newScheduledThreadPool。</p>
+<blockquote>
+<p>这里多说一句，这里只是说明NewThreadWorker是容量为1的newScheduledThreadPool。Schedulers.io()——也就是CachedThreadScheduler(threadFactory)，这个类维护了一个AtomicReference<cachedworkerpool> pool集合，集合中的每个元素都是一个NewThreadWorker。可以理解为线程池的缓存。</cachedworkerpool></p>
+</blockquote>
+<p>　　再回到EventLoopWorker的schedule方法中，我们知道threadWorker.scheduleActual启动了一个新的线程，线程会执行scheduleActual第一个参数——Action0的call方法。而这个call方法中执行了一行：<code>action.call();</code></p>
+<p>　　往上层代码中查找发现这里的action就是subscriberB——SubscribeOnSubscriber。因此在SubscribeOnSubscriber代码中可以看到除了OnNext等方法之外还有一个call方法，而正常的subscriber是不应该有call方法的。这个call方法也是因为SubscribeOnSubscriber实现了Action0接口复写的。所以在action.call()中调用的就是SubscribeOnSubscriber里的call。具体代码请自行往上翻……<br>　　在这个call中执行了<code>src.unsafeSubscribe(this)</code>。是的，就是ObservableA.subscribe(subscriberB)。</p>
+<p>　　而ObservableA其实就是Observable.create()，也就是我们自己定义的被观察者。根据基本调用，会执行ObservableA中OnSubscribe的call方法，接着执行subscriberB.onNext(“hello rxjava”)。</p>
+<blockquote>
+<p><strong>所以，subscribeOn是先切换了线程，再去启动事件的，并且从启动事件开始，直到再次切换线程以前，都是在这个新线程中执行的。</strong></p>
+</blockquote>
+<p>　　下一步，来看下subscriberB——SubscribeOnSubscriber如何接收的。</p>
+<h2 id="3-3-subscribeOn-源码解析（二）"><a href="#3-3-subscribeOn-源码解析（二）" class="headerlink" title="3.3 subscribeOn()源码解析（二）"></a>3.3 subscribeOn()源码解析（二）</h2><p>　　来看下subscribeOn()中创建的SubscribeOnSubscriber中接收事件的onNext方法：<br><figure class="highlight plain"><figcaption><span>SubscribeOnSubscriber的onNext源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">@Override</span><br><span class="line">public void onNext(T t) &#123;</span><br><span class="line">    actual.onNext(t);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<img src="/2018/08/01/一起读RxJava源码（五）——线程调度/jingdai.jpeg" width="200" height="200" title="惊呆">
+<p>　　好惊喜有木有，就<del>TM</del>一句啊……这里actual是OperatorSubscribeOn中call方法带入的，也就是subscriberC——在ObservableB.subscribe(SubscriberC)的时候传入的。<br>　　所以这里事件没有操作直接传往SubscriberC的onNext了……这甩锅甩的够快的……</p>
+<p>　　下面该进入SubscriberC的onNext了。</p>
+<h2 id="3-3-observeOn-源码解析（二）"><a href="#3-3-observeOn-源码解析（二）" class="headerlink" title="3.3 observeOn()源码解析（二）"></a>3.3 observeOn()源码解析（二）</h2><p>　　SubscriberC是在observeOn()中初始化的ObserveOnSubscriber，来看下源码：<br><figure class="highlight plain"><figcaption><span>ObserveOnSubscriber源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line">static final class ObserveOnSubscriber&lt;T&gt; extends Subscriber&lt;T&gt; implements Action0 &#123;</span><br><span class="line">    ……</span><br><span class="line">    @Override</span><br><span class="line">    public void onNext(final T t) &#123;</span><br><span class="line">        if (isUnsubscribed() || finished) &#123;</span><br><span class="line">            return;</span><br><span class="line">        &#125;</span><br><span class="line">        if (!queue.offer(NotificationLite.next(t))) &#123;</span><br><span class="line">            onError(new MissingBackpressureException());</span><br><span class="line">            return;</span><br><span class="line">        &#125;</span><br><span class="line">        schedule();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    protected void schedule() &#123;</span><br><span class="line">        if (counter.getAndIncrement() == 0) &#123;</span><br><span class="line">            recursiveScheduler.schedule(this);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // only execute this from schedule()</span><br><span class="line">    @Override</span><br><span class="line">    public void call() &#123;</span><br><span class="line">        long missed = 1L;</span><br><span class="line">        long currentEmission = emitted;</span><br><span class="line"></span><br><span class="line">        final Queue&lt;Object&gt; q = this.queue;</span><br><span class="line">        final Subscriber&lt;? super T&gt; localChild = this.child;</span><br><span class="line"></span><br><span class="line">        for (;;) &#123;</span><br><span class="line">            long requestAmount = requested.get();</span><br><span class="line"></span><br><span class="line">            while (requestAmount != currentEmission) &#123;</span><br><span class="line">                boolean done = finished;</span><br><span class="line">                Object v = q.poll();</span><br><span class="line">                boolean empty = v == null;</span><br><span class="line"></span><br><span class="line">                if (checkTerminated(done, empty, localChild, q)) &#123;</span><br><span class="line">                    return;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                if (empty) &#123;</span><br><span class="line">                    break;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                localChild.onNext(NotificationLite.&lt;T&gt;getValue(v));</span><br><span class="line"></span><br><span class="line">                currentEmission++;</span><br><span class="line">                if (currentEmission == limit) &#123;</span><br><span class="line">                    requestAmount = BackpressureUtils.produced(requested, currentEmission);</span><br><span class="line">                    request(currentEmission);</span><br><span class="line">                    currentEmission = 0L;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            if (requestAmount == currentEmission) &#123;</span><br><span class="line">                if (checkTerminated(finished, q.isEmpty(), localChild, q)) &#123;</span><br><span class="line">                    return;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            emitted = currentEmission;</span><br><span class="line">            missed = counter.addAndGet(-missed);</span><br><span class="line">            if (missed == 0L) &#123;</span><br><span class="line">                break;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　在ObserveOnSubscriber中执行了schedule()，而schedule()中执行了<code>recursiveScheduler.schedule(this)</code>。<br>　　来看下recursiveScheduler，在ObserveOnSubscriber构造器中有这么一句：<code>this.recursiveScheduler = scheduler.createWorker();</code><br>　　看到熟悉的createWorker()以及recursiveScheduler.schedule就知道这里要切换线程了。我们先等等，先看看这个scheduler引用的是啥。一层一层往上查找，发现就是<code>observeOn(AndroidSchedulers.mainThread())</code>传的<code>AndroidSchedulers.mainThread()</code>。再来看下这个方法：<br><figure class="highlight plain"><figcaption><span>ObserveOnSubscriber源码</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">private AndroidSchedulers() &#123;</span><br><span class="line">    RxAndroidSchedulersHook hook = RxAndroidPlugins.getInstance().getSchedulersHook();</span><br><span class="line"></span><br><span class="line">    Scheduler main = hook.getMainThreadScheduler();</span><br><span class="line">    if (main != null) &#123;</span><br><span class="line">        mainThreadScheduler = main;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        mainThreadScheduler = new LooperScheduler(Looper.getMainLooper());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">/** A &#123;@link Scheduler&#125; which executes actions on the Android UI thread. */</span><br><span class="line">public static Scheduler mainThread() &#123;</span><br><span class="line">    return getInstance().mainThreadScheduler;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>　　所以执行scheduler.createWorker()的是LooperScheduler，而这个LooperScheduler(Looper.getMainLooper())传的参数是不是很熟悉？Looper.getMainLooper()获取主线程的Looper。</p>
+<p>　　这里回到ObserveOnSubscriber中来，recursiveScheduler.schedule(this)切换到了主线程并执行this——也就是ObserveOnSubscriber的call方法。<br>call方法中有两句<code>localChild.onNext(NotificationLite.&lt;T&gt;getValue(v));</code>和<code>checkTerminated(done, empty, localChild, q)</code>：就是调用SubscriberD的onNext()、onCompleted()、onError()。</p>
+<blockquote>
+<p><strong>也就是说，observeOn是在之前的线程中接受事件，然后切换线程，这个例子是切换到主线程，然后在新线程（主线程）中下发事件给下一级的观察者。</strong></p>
+</blockquote>
+<p>　　到这里，线程调度的主要代码就介绍完了，下面看下整体流程。</p>
+<h1 id="4-线程调度整体流程"><a href="#4-线程调度整体流程" class="headerlink" title="4. 线程调度整体流程"></a>4. 线程调度整体流程</h1><p>　　请回忆线程调度基本实现代码，然后再来看下面的流程。</p>
+<blockquote>
+<p>第一步：Observable.create，创建被观察者，记为<strong>ObservableA</strong><br>第二步：.subscribeOn(Schedulers.io())，创建新被观察者，记为<strong>ObservableB</strong><br>第三步：.observeOn(AndroidSchedulers.mainThread())，创建新被观察者，记为<strong>ObservableC</strong><br>第四步：.subscribe(new Subscriber<string>())，创建观察者，记为<strong>SubscriberD</strong>，并建立依赖关系：ObservableC.subscribe(SubscriberD)</string></p>
+<p>第五步：创建新观察者ObserveOnSubscriber，记为<strong>SubscriberC</strong>。并建立新依赖关系ObservableB.subscribe(SubscriberC)<br>第六步：通过制定Scheduler创建Worker；创建新观察者SubscribeOnSubscriber，记为<strong>SubscriberB</strong>；worker.schedule()切换新线程；在新线程中执行ObservableA.subscribe(SubscriberB)</p>
+<p>第七步：ObservableA中OnSubscribe的call开始发送事件”hello rxjava”</p>
+<p>第八步：SubscriberB接到事件后，直接甩给SubscriberC<br>第九步：SubscriberC接收事件；通过Worker切换到主线程；在主线程中将事件传递给SubscriberD<br>第十步：SubscriberD接收事件，整体流程结束</p>
+</blockquote>
+<p><strong>根据流程我们可以简单总结为：subscribeOn在事件上行时切换线程，而observeOn是在事件下发时切换线程。</strong><br>自己画了张图，加深理解：<br><img src="/2018/08/01/一起读RxJava源码（五）——线程调度/lichengtu.png" title="流程图"></p>
+<h1 id="5-总结"><a href="#5-总结" class="headerlink" title="5. 总结"></a>5. 总结</h1><p>　　线程调度到这里就告一段落了，我讲的也是寥寥数语，只是把大体流程介绍了一遍。如果想仔细搞懂每一步的细节，还需要在多线程以及handler机制上下功夫。<br>　　我们经过这几篇的介绍,RxJava源码主要的逻辑基本介绍完了。下一章会介绍一些较为轻松的RxJava的具体应用，敬请期待！</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RxJava/">RxJava</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2019/06/18/斐波那契数列-Fibonacci-sequence-的6种解法/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">上一篇</strong>
+      <div class="article-nav-title">
+        
+          斐波那契数列(Fibonacci sequence)的6种解法
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2018/06/24/一起读RxJava源码（四）——转换操作符/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">下一篇</strong>
+      <div class="article-nav-title">一起读RxJava源码（四）——转换操作符</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+<!-- Table of Contents -->
+
+  <aside id="toc-sidebar">
+    <div id="toc" class="toc-article">
+    <strong class="toc-title">文章目录</strong>
+    
+        <ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-线程调度的核心：Scheduler"><span class="nav-text">1. 线程调度的核心：Scheduler</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1-Scheduler介绍"><span class="nav-text">1.1 Scheduler介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2-单独使用Scheduler"><span class="nav-text">1.2 单独使用Scheduler</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-线程调度的基本实现"><span class="nav-text">2. 线程调度的基本实现</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-线程调度的源码解析——基于事件流"><span class="nav-text">3. 线程调度的源码解析——基于事件流</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#3-1-observeOn-源码解析（一）"><span class="nav-text">3.1 observeOn()源码解析（一）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-2-subscribeOn-源码解析（一）"><span class="nav-text">3.2 subscribeOn()源码解析（一）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-3-subscribeOn-源码解析（二）"><span class="nav-text">3.3 subscribeOn()源码解析（二）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-3-observeOn-源码解析（二）"><span class="nav-text">3.3 observeOn()源码解析（二）</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-线程调度整体流程"><span class="nav-text">4. 线程调度整体流程</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#5-总结"><span class="nav-text">5. 总结</span></a></li></ol>
+    
+    </div>
+  </aside>
+
+
+</section>
+        
+      </div>
+      
+      <footer id="footer">
+  
+
+  <div class="container">
+      	<div class="row">
+	      <p> Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> and <a href="https://github.com/iTimeTraveler/hexo-theme-hiker" target="_blank">Hexo-theme-hiker</a> </p>
+	      <p id="copyRightEn">Copyright &copy; 2018 - 2022 TEN-Z&#39;S BLOG All Rights Reserved.</p>
+	      
+	      
+    		<p class="busuanzi_uv">
+				访客数 : <span id="busuanzi_value_site_uv"></span> |  
+				访问量 : <span id="busuanzi_value_site_pv"></span>
+		    </p>
+  		   
+		</div>
+
+		
+  </div>
+</footer>
+
+
+<!-- min height -->
+
+<script>
+    var wrapdiv = document.getElementById("wrap");
+    var contentdiv = document.getElementById("content");
+    var allheader = document.getElementById("allheader");
+
+    wrapdiv.style.minHeight = document.body.offsetHeight + "px";
+    if (allheader != null) {
+      contentdiv.style.minHeight = document.body.offsetHeight - allheader.offsetHeight - document.getElementById("footer").offsetHeight + "px";
+    } else {
+      contentdiv.style.minHeight = document.body.offsetHeight - document.getElementById("footer").offsetHeight + "px";
+    }
+</script>
+    </div>
+    <!-- <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+    <a href="/categories" class="mobile-nav-link">Categories</a>
+  
+    <a href="/tags" class="mobile-nav-link">Tags</a>
+  
+    <a href="/about" class="mobile-nav-link">About</a>
+  
+</nav> -->
+    
+
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/scripts.js"></script>
+
+
+
+
+  <script src="/js/dialog.js"></script>
+
+
+
+
+
+
+
+
+
+	<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js">
+	</script>
+
+
+
+
+
+
+  </div>
+
+  <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" style="display: none;">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="myModalLabel">设置</h2>
+      </div>
+      <hr style="margin-top:0px; margin-bottom:0px; width:80%; border-top: 3px solid #000;">
+      <hr style="margin-top:2px; margin-bottom:0px; width:80%; border-top: 1px solid #000;">
+
+
+      <div class="modal-body">
+          <div style="margin:6px;">
+            <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" onclick="javascript:setFontSize();" aria-expanded="true" aria-controls="collapseOne">
+              正文字号大小
+            </a>
+          </div>
+          <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+          <div class="panel-body">
+            您已调整页面字体大小
+          </div>
+        </div>
+      
+
+
+          <div style="margin:6px;">
+            <a data-toggle="collapse" data-parent="#accordion" href="#collapseTwo" onclick="javascript:setBackground();" aria-expanded="true" aria-controls="collapseTwo">
+              夜间护眼模式
+            </a>
+        </div>
+          <div id="collapseTwo" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
+          <div class="panel-body">
+            夜间模式已经开启，再次单击按钮即可关闭 
+          </div>
+        </div>
+
+        <div>
+            <a data-toggle="collapse" data-parent="#accordion" href="#collapseThree" aria-expanded="true" aria-controls="collapseThree">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;关 于&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a>
+        </div>
+         <div id="collapseThree" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingThree">
+          <div class="panel-body">
+            TEN-Z&#39;S BLOG
+          </div>
+          <div class="panel-body">
+            Copyright © 2022 ten-z All Rights Reserved.
+          </div>
+        </div>
+      </div>
+
+
+      <hr style="margin-top:0px; margin-bottom:0px; width:80%; border-top: 1px solid #000;">
+      <hr style="margin-top:2px; margin-bottom:0px; width:80%; border-top: 3px solid #000;">
+      <div class="modal-footer">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+  
+  <a id="rocket" href="#top" class=""></a>
+  <script type="text/javascript" src="/js/totop.js?v=1.0.0" async=""></script>
+  
+    <a id="menu-switch"><i class="fa fa-bars fa-lg"></i></a>
+  
+</body>
+</html>
