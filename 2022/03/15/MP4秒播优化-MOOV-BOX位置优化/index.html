@@ -25,7 +25,7 @@
 <meta property="og:image" content="https://ten-z.github.io/2022/03/15/MP4秒播优化-MOOV-BOX位置优化/moov_after.png">
 <meta property="og:image" content="https://ten-z.github.io/2022/03/15/MP4秒播优化-MOOV-BOX位置优化/time_before.png">
 <meta property="og:image" content="https://ten-z.github.io/2022/03/15/MP4秒播优化-MOOV-BOX位置优化/time_after.png">
-<meta property="og:updated_time" content="2022-03-16T09:40:07.505Z">
+<meta property="og:updated_time" content="2022-03-29T04:07:14.890Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="MP4秒播优化-MOOV BOX位置优化">
 <meta name="twitter:description" content="之前的工作中负责了视频广告业务，也顺带学习了下音视频相关的基本知识。这篇文章是在支持了音视频基本功能后，进行视频广告启播优化时学习和调研的一次总结。">
@@ -211,6 +211,7 @@
 </blockquote>
 <h1 id="2-Moov耗时原因"><a href="#2-Moov耗时原因" class="headerlink" title="2.Moov耗时原因"></a>2.Moov耗时原因</h1><p>　　首先mp4是由很多box组成的，在moov box中存储了描述音视频格式如视频宽高、分辨率、码率等相关的格式信息，先要拿到这些信息才能播放。如果将moov box放在文件的前面，那么只需要通过一次http请求就可以直接读取到，进而执行解封装。而如果在moov box放在文件的后边，但关键是播放器不知道它放在后面，这就需要先发起一次http请求读开头部分数据，发现是mdat，进而会seek到文件后边位置，读取moov box，然后再seek到文件前边的mdat，从新读取mdat。每发生一次seek就会重新发起一次http connetion请求。因此moov box放在后边比放在前边多了2次http connection。<br>　　如果在起播过程中发生了http re-connection耗时肯定会增加，而且http connection的耗时基本是不可优化的，所以要避免http re-connection的发生。因此将mp4中moov box提前会有比较好的优化效果。</p>
 <img src="/2022/03/15/MP4秒播优化-MOOV-BOX位置优化/moov_box.png" title="moov_box">
+<p>　这里关于 <strong>“如果一开始就读取到mdat后是否会seek到末尾”</strong>问题，我在不同的文章中发现了不同的结论。有文章说如果一开始就读取到mdat后会一直把mdat请求完毕，也就是内容全部下载完后读取moov-解封装-播放。播放等待时间为内容下载耗时。我看的这篇文章写的是读到mdat后会seek到末尾，再seek回mdat，耗时为http connection耗时。我查阅其他文章后目前的结论是：是否可以seek到数据末尾请求数据需要服务端支持。如果只是把视频文件简单存放在服务端，请求的时候是没法seek也就是不能先请求最后的数据的。如果服务端支持seek，那么则可以实现先请求最后的box数据，再请求前面的数据，最后合包时组合成原始数据。</p>
 <h1 id="3-解决方案"><a href="#3-解决方案" class="headerlink" title="3.解决方案"></a>3.解决方案</h1><p>　　线上方案：在mp4文件上传到服务器之后，重新封装，把moov_box放到mdat前面。此方案实施在广告投放平台，由后端和视频团队执行。<br>　　本次调研方案：本次调研为纯客户端调研。首先找了一段测试视频广告1，用mp4info确认视频1的moov_box在最末端。然后从网上找了一段能将mp4中的moov box提前的python脚本，在本地执行将视频1的moov_box提前生成视频2。将视频1和视频2上传广告测试平台。在app中用同一广告位分别拉取两个视频广告，测试启播时间。</p>
 <h1 id="4-调研结果"><a href="#4-调研结果" class="headerlink" title="4.调研结果"></a>4.调研结果</h1><ul>
 <li>设备：三星J600G</li>
@@ -223,7 +224,7 @@
 <p>转码后：<br><img src="/2022/03/15/MP4秒播优化-MOOV-BOX位置优化/moov_after.png" title="moov_after"></p>
 <ul>
 <li>可以看到转码后moov位置提到mdat之前</li>
-<li>参考耗时：startPreparing和onPrepared之间为mediaplayer起播内部耗时。<br>转码前：<img src="/2022/03/15/MP4秒播优化-MOOV-BOX位置优化/time_before.png" title="time_before">
+<li>参考耗时：startPreparing(自己的tag，在对应mediaplayer的prepareAsync前)和onPrepared(对应mediaplayer的onPrepared状态)之间为mediaplayer起播内部耗时(解协议、解封装)。<br>转码前：<img src="/2022/03/15/MP4秒播优化-MOOV-BOX位置优化/time_before.png" title="time_before">
 </li>
 </ul>
 <p>转码后：<br><img src="/2022/03/15/MP4秒播优化-MOOV-BOX位置优化/time_after.png" title="time_after"></p>
