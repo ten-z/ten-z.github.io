@@ -11,20 +11,20 @@
   
   
   
-  <meta name="description" content="最近想把之前在github上搭的博客整一整。由于换了电脑，移植过程中出现了各式各样奇葩的问题。现记录下，防止以后移植踩坑。">
+  <meta name="description" content="最近想把之前在github上搭的博客整一整。由于换了电脑，移植过程中出现了各式各样奇葩的问题。现记录下，防止以后移植踩坑。　　MAC配置环境变量的坑也记录在此。">
 <meta name="keywords" content="Hexo">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Hexo+Github博客移植及白屏问题">
 <meta property="og:url" content="https://ten-z.github.io/2022/03/17/Hexo-Github博客移植及白屏问题/index.html">
 <meta property="og:site_name" content="TEN-Z&#39;S BLOG">
-<meta property="og:description" content="最近想把之前在github上搭的博客整一整。由于换了电脑，移植过程中出现了各式各样奇葩的问题。现记录下，防止以后移植踩坑。">
+<meta property="og:description" content="最近想把之前在github上搭的博客整一整。由于换了电脑，移植过程中出现了各式各样奇葩的问题。现记录下，防止以后移植踩坑。　　MAC配置环境变量的坑也记录在此。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://ten-z.github.io/2022/03/17/Hexo-Github博客移植及白屏问题/踩坑.jpg">
 <meta property="og:image" content="https://ten-z.github.io/2022/03/17/Hexo-Github博客移植及白屏问题/截屏.png">
-<meta property="og:updated_time" content="2022-03-17T08:09:21.626Z">
+<meta property="og:updated_time" content="2022-07-09T15:08:47.107Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Hexo+Github博客移植及白屏问题">
-<meta name="twitter:description" content="最近想把之前在github上搭的博客整一整。由于换了电脑，移植过程中出现了各式各样奇葩的问题。现记录下，防止以后移植踩坑。">
+<meta name="twitter:description" content="最近想把之前在github上搭的博客整一整。由于换了电脑，移植过程中出现了各式各样奇葩的问题。现记录下，防止以后移植踩坑。　　MAC配置环境变量的坑也记录在此。">
 <meta name="twitter:image" content="https://ten-z.github.io/2022/03/17/Hexo-Github博客移植及白屏问题/踩坑.jpg">
   
 
@@ -195,8 +195,7 @@
     <div class="article-entry" itemprop="articleBody">
       
         <img src="/2022/03/17/Hexo-Github博客移植及白屏问题/踩坑.jpg" title="踩坑">
-<p>　　最近想把之前在github上搭的博客整一整。由于换了电脑，移植过程中出现了各式各样奇葩的问题。现记录下，防止以后移植踩坑。</p>
-<a id="more"></a>
+<p>　　最近想把之前在github上搭的博客整一整。由于换了电脑，移植过程中出现了各式各样奇葩的问题。现记录下，防止以后移植踩坑。<br>　　MAC配置环境变量的坑也记录在此。<br><a id="more"></a></p>
 <blockquote>
 <p style="color:Darkorange">版权声明：本文为博主原创文章，未经博主允许不得转载。</p>
 
@@ -211,7 +210,10 @@
 <p>附：<a href="https://www.jianshu.com/p/5f9421b3950d" target="_blank" rel="noopener">node版本切换</a></p>
 <h1 id="3-github-pages-build-failure"><a href="#3-github-pages-build-failure" class="headerlink" title="3. github pages build failure"></a>3. github pages build failure</h1><p>　　在github次项目的的action中可以看到构建的记录，点开发现是400 Error。<br>  <img src="/2022/03/17/Hexo-Github博客移植及白屏问题/截屏.png" title="截屏"></p>
 <p>加上最近github经常打不开。应该是github自己服务崩溃。稍后再试，成功。</p>
-<h1 id="4-safari不支持webp格式"><a href="#4-safari不支持webp格式" class="headerlink" title="4.safari不支持webp格式"></a>4.safari不支持webp格式</h1>
+<h1 id="4-safari不支持webp格式"><a href="#4-safari不支持webp格式" class="headerlink" title="4.safari不支持webp格式"></a>4.safari不支持webp格式</h1><p>　　不知道是不是版本问题，PS导出的webp格式图片上传博客在Safari上显示不出来，在chrome上展示正常。</p>
+<h1 id="5-MAC环境变量配置问题"><a href="#5-MAC环境变量配置问题" class="headerlink" title="5.MAC环境变量配置问题"></a>5.MAC环境变量配置问题</h1><p>　我的MAC终端默认是.zsh。可以通过bash命令切换。但是奇怪的是没有~/.bash_profile和～/.zshrc文件。不太清楚为什么一个配置文件都没有，通过路经进到文件夹查也查不到。<br>  像Java这种通过安装包安装的还好，装完后在终端后就能直接用。Python环境也没有问题。但是通过pip安装的各种插件就完全用不了，必须自己配置环境变量。配置起来还是比较简单，创建～/.zshrc文件添加PATH就好，用:隔开。<br> 但有一个坑是路径选择问题。因为pip安装的插件，例如Atom中beauty插件需要的isort和autopep8，安装后通过where命令是找不到路径的。而安装时终端里显示的路径xxx/lib/xxx只是安装路径，<strong>不是需要配置的环境变量！！！</strong>。这里坑了我很久。要配置的变量即脚本文件在和lib文件同级的xxx/bin/xxx中，环境变量要添加的是bin文件夹。但是没有任何地方提示要配bin文件夹，也没有任何地方提示有bin文件夹，让我找了半天。添加lib文件夹一直会报No permission(更改文件夹权限无效的那种)和No such File（类似）。改成bin文件夹后问题全部消除。
+　　</p>
+
       
     </div>
     <footer class="article-footer">
@@ -252,7 +254,7 @@
     <div id="toc" class="toc-article">
     <strong class="toc-title">文章目录</strong>
     
-        <ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-github-repositories上是hexo-g生成的文件，不是本体。"><span class="nav-text">1.github repositories上是hexo g生成的文件，不是本体。</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-上传后打开白屏问题"><span class="nav-text">2.上传后打开白屏问题</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-github-pages-build-failure"><span class="nav-text">3. github pages build failure</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-safari不支持webp格式"><span class="nav-text">4.safari不支持webp格式</span></a></li></ol>
+        <ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-github-repositories上是hexo-g生成的文件，不是本体。"><span class="nav-text">1.github repositories上是hexo g生成的文件，不是本体。</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-上传后打开白屏问题"><span class="nav-text">2.上传后打开白屏问题</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-github-pages-build-failure"><span class="nav-text">3. github pages build failure</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-safari不支持webp格式"><span class="nav-text">4.safari不支持webp格式</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#5-MAC环境变量配置问题"><span class="nav-text">5.MAC环境变量配置问题</span></a></li></ol>
     
     </div>
   </aside>
