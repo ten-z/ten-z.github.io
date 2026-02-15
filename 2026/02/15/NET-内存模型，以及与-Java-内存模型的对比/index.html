@@ -11,18 +11,20 @@
   
   
   
-  <meta name="description" content="并发编程的本质问题是：  在多线程环境下，一个线程对共享变量的修改，什么时候能够被其他线程看到？ 编译器和 CPU 是否允许对指令进行重排序？ 哪些操作具备原子性保证？  这些问题由内存模型（Memory Model）来定义。 一、什么是内存模型？内存模型是一套语言级规范，用于定义在多线程环境下：  线程之间如何通过内存进行交互 变量读写在不同线程之间何时可见 编译器和 CPU 在什么范围内可以进">
+  <meta name="description" content="并发编程的本质问题是：  在多线程环境下，一个线程对共享变量的修改，什么时候能够被其他线程看到？ 编译器和 CPU 是否允许对指令进行重排序？ 哪些操作具备原子性保证？  这些问题由内存模型（Memory Model）来定义。">
 <meta property="og:type" content="article">
 <meta property="og:title" content=".NET 内存模型，以及与 Java 内存模型的对比">
 <meta property="og:url" content="https://ten-z.github.io/2026/02/15/NET-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%8C%E4%BB%A5%E5%8F%8A%E4%B8%8E-Java-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%AF%B9%E6%AF%94/index.html">
 <meta property="og:site_name" content="TEN-Z&#39;S BLOG">
-<meta property="og:description" content="并发编程的本质问题是：  在多线程环境下，一个线程对共享变量的修改，什么时候能够被其他线程看到？ 编译器和 CPU 是否允许对指令进行重排序？ 哪些操作具备原子性保证？  这些问题由内存模型（Memory Model）来定义。 一、什么是内存模型？内存模型是一套语言级规范，用于定义在多线程环境下：  线程之间如何通过内存进行交互 变量读写在不同线程之间何时可见 编译器和 CPU 在什么范围内可以进">
+<meta property="og:description" content="并发编程的本质问题是：  在多线程环境下，一个线程对共享变量的修改，什么时候能够被其他线程看到？ 编译器和 CPU 是否允许对指令进行重排序？ 哪些操作具备原子性保证？  这些问题由内存模型（Memory Model）来定义。">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ten-z.github.io/2026/02/15/NET-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%8C%E4%BB%A5%E5%8F%8A%E4%B8%8E-Java-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%AF%B9%E6%AF%94/model.png">
 <meta property="article:published_time" content="2026-02-15T08:57:57.000Z">
-<meta property="article:modified_time" content="2026-02-15T09:09:03.241Z">
+<meta property="article:modified_time" content="2026-02-15T09:19:49.429Z">
 <meta property="article:author" content="ten-z">
 <meta property="article:tag" content="内存模型">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ten-z.github.io/2026/02/15/NET-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%8C%E4%BB%A5%E5%8F%8A%E4%B8%8E-Java-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%AF%B9%E6%AF%94/model.png">
   
 
   
@@ -201,13 +203,15 @@
     </div>
     <div class="article-entry" itemprop="articleBody">
       
-        <p>并发编程的本质问题是：</p>
+        <img src="/2026/02/15/NET-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%8C%E4%BB%A5%E5%8F%8A%E4%B8%8E-Java-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%AF%B9%E6%AF%94/model.png" class="" width="300" height="600" title="model">
+<p>并发编程的本质问题是：</p>
 <ul>
 <li>在多线程环境下，一个线程对共享变量的修改，什么时候能够被其他线程看到？</li>
 <li>编译器和 CPU 是否允许对指令进行重排序？</li>
 <li>哪些操作具备原子性保证？</li>
 </ul>
 <p>这些问题由<strong>内存模型（Memory Model）</strong>来定义。</p>
+<span id="more"></span>
 <h2 id="一、什么是内存模型？"><a href="#一、什么是内存模型？" class="headerlink" title="一、什么是内存模型？"></a>一、什么是内存模型？</h2><p>内存模型是一套语言级规范，用于定义在多线程环境下：</p>
 <ul>
 <li>线程之间如何通过内存进行交互</li>
@@ -272,58 +276,7 @@
 <li>原子操作</li>
 </ul>
 <p>无论是 .NET 还是 Java，内存模型的核心都是围绕 happens-before 构建。</p>
-<h2 id="三、-NET-是否有内存模型？"><a href="#三、-NET-是否有内存模型？" class="headerlink" title="三、.NET 是否有内存模型？"></a>三、.NET 是否有内存模型？</h2><p>有。</p>
-<p>.NET 的内存模型定义在 CLI（Common Language Infrastructure）规范中（ECMA 规范的一部分）。C# 作为运行在 CLI 之上的语言，遵循这一内存模型。</p>
-<p>.NET 内存模型定义了：</p>
-<ul>
-<li>在没有同步的情况下，允许重排序</li>
-<li>同步原语如何建立 happens-before 关系</li>
-<li>lock、volatile、Interlocked 等具备的内存屏障语义</li>
-</ul>
-<h2 id="二、什么是-happens-before？-1"><a href="#二、什么是-happens-before？-1" class="headerlink" title="二、什么是 happens-before？"></a>二、什么是 happens-before？</h2><p>happens-before 是内存模型中的一个偏序关系（partial order），用于定义：</p>
-<ul>
-<li>如果操作 A happens-before 操作 B，那么 A 的结果对 B 可见，并且 A 在逻辑上先于 B 执行。</li>
-</ul>
-<p>它并不表示“时间上的绝对先后”，而是表示一种可见性与顺序保证。</p>
-<p>可以理解为：</p>
-<ul>
-<li>如果没有 happens-before 关系 → 结果不可预测</li>
-<li>如果存在 happens-before 关系 → 可见性得到保证</li>
-</ul>
-<h3 id="一个简单示例-1"><a href="#一个简单示例-1" class="headerlink" title="一个简单示例"></a>一个简单示例</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">int</span> x = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Thread 1</span></span><br><span class="line">x = <span class="number">42</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Thread 2</span></span><br><span class="line">Console.WriteLine(x);</span><br></pre></td></tr></table></figure>
-<p>在没有同步的情况下：</p>
-<ul>
-<li>Thread 2 可能打印 0</li>
-<li>也可能打印 42</li>
-</ul>
-<p>因为两个线程之间没有 happens-before 关系。</p>
-<h3 id="加上锁之后-1"><a href="#加上锁之后-1" class="headerlink" title="加上锁之后"></a>加上锁之后</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">lock</span>(obj)</span><br><span class="line">&#123;</span><br><span class="line">    x = <span class="number">42</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">lock</span>(obj)</span><br><span class="line">&#123;</span><br><span class="line">    Console.WriteLine(x);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>这里存在：</p>
-<ul>
-<li>Thread1 的 unlock happens-before Thread2 的 lock</li>
-</ul>
-<p>因此：</p>
-<ul>
-<li>写入 <code>x = 42</code> 对 Thread2 可见</li>
-<li>不会打印 0</li>
-</ul>
-<h3 id="happens-before-的本质-1"><a href="#happens-before-的本质-1" class="headerlink" title="happens-before 的本质"></a>happens-before 的本质</h3><p>它本质上定义了：</p>
-<ul>
-<li>哪些操作会形成内存屏障</li>
-<li>哪些写入必须对后续读取可见</li>
-<li>哪些重排序是被禁止的</li>
-</ul>
-<p>常见建立 happens-before 的方式包括：</p>
-<ul>
-<li>释放锁 → 获取同一把锁</li>
-<li>volatile 写 → volatile 读</li>
-<li>线程启动</li>
-<li>线程 join</li>
-<li>原子操作</li>
-</ul>
-<p>无论是 .NET 还是 Java，内存模型的核心都是围绕 happens-before 构建。</p>
-<h2 id="三、-NET-是否有内存模型？-1"><a href="#三、-NET-是否有内存模型？-1" class="headerlink" title="三、.NET 是否有内存模型？"></a>三、.NET 是否有内存模型？</h2><p>有。</p>
-<p>.NET 的内存模型定义在 CLI（Common Language Infrastructure）规范中（ECMA 规范的一部分）。C# 作为运行在 CLI 之上的语言，遵循这一内存模型。</p>
+<h2 id="三、-NET-是否有内存模型？"><a href="#三、-NET-是否有内存模型？" class="headerlink" title="三、.NET 是否有内存模型？"></a>三、.NET 是否有内存模型？</h2><p>有。.NET 的内存模型定义在 CLI（Common Language Infrastructure）规范中（ECMA 规范的一部分）。C# 作为运行在 CLI 之上的语言，遵循这一内存模型。</p>
 <p>.NET 内存模型定义了：</p>
 <ul>
 <li>在没有同步的情况下，允许重排序</li>
@@ -534,7 +487,7 @@
     <div id="toc" class="toc-article">
     <strong class="toc-title">文章目录</strong>
     
-        <ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%9F"><span class="nav-text">一、什么是内存模型？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF-happens-before%EF%BC%9F"><span class="nav-text">二、什么是 happens-before？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%A4%BA%E4%BE%8B"><span class="nav-text">一个简单示例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%A0%E4%B8%8A%E9%94%81%E4%B9%8B%E5%90%8E"><span class="nav-text">加上锁之后</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#happens-before-%E7%9A%84%E6%9C%AC%E8%B4%A8"><span class="nav-text">happens-before 的本质</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81-NET-%E6%98%AF%E5%90%A6%E6%9C%89%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%9F"><span class="nav-text">三、.NET 是否有内存模型？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF-happens-before%EF%BC%9F-1"><span class="nav-text">二、什么是 happens-before？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%A4%BA%E4%BE%8B-1"><span class="nav-text">一个简单示例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%A0%E4%B8%8A%E9%94%81%E4%B9%8B%E5%90%8E-1"><span class="nav-text">加上锁之后</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#happens-before-%E7%9A%84%E6%9C%AC%E8%B4%A8-1"><span class="nav-text">happens-before 的本质</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81-NET-%E6%98%AF%E5%90%A6%E6%9C%89%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%9F-1"><span class="nav-text">三、.NET 是否有内存模型？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81-NET-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E6%A0%B8%E5%BF%83%E6%9C%BA%E5%88%B6"><span class="nav-text">四、.NET 内存模型核心机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E9%87%8D%E6%8E%92%E5%BA%8F"><span class="nav-text">1. 重排序</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E5%8F%AF%E8%A7%81%E6%80%A7%E9%97%AE%E9%A2%98%E7%A4%BA%E4%BE%8B"><span class="nav-text">2. 可见性问题示例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-volatile"><span class="nav-text">3. volatile</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-lock%EF%BC%88Monitor%EF%BC%89"><span class="nav-text">4. lock（Monitor）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-Interlocked"><span class="nav-text">5. Interlocked</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-MemoryBarrier"><span class="nav-text">6. MemoryBarrier</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81Java-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%88JMM%EF%BC%89"><span class="nav-text">五、Java 内存模型（JMM）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81-NET-%E4%B8%8E-Java-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94"><span class="nav-text">六、.NET 与 Java 内存模型对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81volatile-%E5%AF%B9%E6%AF%94"><span class="nav-text">七、volatile 对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E5%8F%8C%E9%87%8D%E6%A3%80%E6%9F%A5%E9%94%81%EF%BC%88DCL%EF%BC%89%E5%B7%AE%E5%BC%82"><span class="nav-text">八、双重检查锁（DCL）差异</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E4%B8%A4%E8%80%85%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6%E5%B7%AE%E5%BC%82"><span class="nav-text">九、两者设计哲学差异</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E4%B8%8E-GC-%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="nav-text">十、与 GC 的关系</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-text">十一、总结</span></a></li></ol>
+        <ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%9F"><span class="nav-text">一、什么是内存模型？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF-happens-before%EF%BC%9F"><span class="nav-text">二、什么是 happens-before？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%A4%BA%E4%BE%8B"><span class="nav-text">一个简单示例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%A0%E4%B8%8A%E9%94%81%E4%B9%8B%E5%90%8E"><span class="nav-text">加上锁之后</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#happens-before-%E7%9A%84%E6%9C%AC%E8%B4%A8"><span class="nav-text">happens-before 的本质</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81-NET-%E6%98%AF%E5%90%A6%E6%9C%89%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%9F"><span class="nav-text">三、.NET 是否有内存模型？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81-NET-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E6%A0%B8%E5%BF%83%E6%9C%BA%E5%88%B6"><span class="nav-text">四、.NET 内存模型核心机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E9%87%8D%E6%8E%92%E5%BA%8F"><span class="nav-text">1. 重排序</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E5%8F%AF%E8%A7%81%E6%80%A7%E9%97%AE%E9%A2%98%E7%A4%BA%E4%BE%8B"><span class="nav-text">2. 可见性问题示例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-volatile"><span class="nav-text">3. volatile</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-lock%EF%BC%88Monitor%EF%BC%89"><span class="nav-text">4. lock（Monitor）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-Interlocked"><span class="nav-text">5. Interlocked</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-MemoryBarrier"><span class="nav-text">6. MemoryBarrier</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81Java-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%88JMM%EF%BC%89"><span class="nav-text">五、Java 内存模型（JMM）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81-NET-%E4%B8%8E-Java-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94"><span class="nav-text">六、.NET 与 Java 内存模型对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81volatile-%E5%AF%B9%E6%AF%94"><span class="nav-text">七、volatile 对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E5%8F%8C%E9%87%8D%E6%A3%80%E6%9F%A5%E9%94%81%EF%BC%88DCL%EF%BC%89%E5%B7%AE%E5%BC%82"><span class="nav-text">八、双重检查锁（DCL）差异</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E4%B8%A4%E8%80%85%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6%E5%B7%AE%E5%BC%82"><span class="nav-text">九、两者设计哲学差异</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E4%B8%8E-GC-%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="nav-text">十、与 GC 的关系</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-text">十一、总结</span></a></li></ol>
     
     </div>
   </aside>
