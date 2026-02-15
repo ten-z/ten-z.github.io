@@ -367,6 +367,405 @@
         
           <section id="main" style="float:none;">
   
+    <article id="post-NET-内存模型，以及与-Java-内存模型的对比"  class="article article-type-post" itemscope itemprop="blogPost" >
+  <div id="articleInner" class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="thumb" itemprop="name">
+      <a class="article-title" href="/2026/02/15/NET-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%8C%E4%BB%A5%E5%8F%8A%E4%B8%8E-Java-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%AF%B9%E6%AF%94/">.NET 内存模型，以及与 Java 内存模型的对比</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-meta">
+      
+	<a href="/2026/02/15/NET-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%EF%BC%8C%E4%BB%A5%E5%8F%8A%E4%B8%8E-Java-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%AF%B9%E6%AF%94/" class="article-date">
+	  <time datetime="2026-02-15T08:57:57.000Z" itemprop="datePublished">2026-02-15</time>
+	</a>
+
+      
+    <a class="article-category-link" href="/categories/net/">.net</a>
+
+      
+    </div>
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>并发编程的本质问题是：</p>
+<ul>
+<li>在多线程环境下，一个线程对共享变量的修改，什么时候能够被其他线程看到？</li>
+<li>编译器和 CPU 是否允许对指令进行重排序？</li>
+<li>哪些操作具备原子性保证？</li>
+</ul>
+<p>这些问题由<strong>内存模型（Memory Model）</strong>来定义。</p>
+<h2 id="一、什么是内存模型？"><a href="#一、什么是内存模型？" class="headerlink" title="一、什么是内存模型？"></a>一、什么是内存模型？</h2><p>内存模型是一套语言级规范，用于定义在多线程环境下：</p>
+<ul>
+<li>线程之间如何通过内存进行交互</li>
+<li>变量读写在不同线程之间何时可见</li>
+<li>编译器和 CPU 在什么范围内可以进行重排序</li>
+<li>哪些同步操作能够建立 happens-before 关系</li>
+</ul>
+<p>需要注意的是，内存模型并不是物理内存结构，而是抽象层面的规则系统。</p>
+<p>在现代计算机体系结构中：</p>
+<ul>
+<li>CPU 存在多级缓存</li>
+<li>指令允许乱序执行</li>
+<li>写操作可能被延迟刷新</li>
+</ul>
+<p>如果语言层面不定义清晰规则，多线程程序将无法推理其行为。</p>
+<p>内存模型通常围绕三个核心性质展开：</p>
+<ul>
+<li>可见性（Visibility）—— 一个线程的修改何时对其他线程可见</li>
+<li>有序性（Ordering）—— 指令是否可能被重排序</li>
+<li>原子性（Atomicity）—— 操作是否不可分割</li>
+</ul>
+<p>理解内存模型，本质是在理解并发程序的行为边界。</p>
+<h2 id="二、什么是-happens-before？"><a href="#二、什么是-happens-before？" class="headerlink" title="二、什么是 happens-before？"></a>二、什么是 happens-before？</h2><p>happens-before 是内存模型中的一个偏序关系（partial order），用于定义：</p>
+<ul>
+<li>如果操作 A happens-before 操作 B，那么 A 的结果对 B 可见，并且 A 在逻辑上先于 B 执行。</li>
+</ul>
+<p>它并不表示“时间上的绝对先后”，而是表示一种可见性与顺序保证。</p>
+<p>可以理解为：</p>
+<ul>
+<li>如果没有 happens-before 关系 → 结果不可预测</li>
+<li>如果存在 happens-before 关系 → 可见性得到保证</li>
+</ul>
+<h3 id="一个简单示例"><a href="#一个简单示例" class="headerlink" title="一个简单示例"></a>一个简单示例</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">int</span> x = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Thread 1</span></span><br><span class="line">x = <span class="number">42</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Thread 2</span></span><br><span class="line">Console.WriteLine(x);</span><br></pre></td></tr></table></figure>
+<p>在没有同步的情况下：</p>
+<ul>
+<li>Thread 2 可能打印 0</li>
+<li>也可能打印 42</li>
+</ul>
+<p>因为两个线程之间没有 happens-before 关系。</p>
+<h3 id="加上锁之后"><a href="#加上锁之后" class="headerlink" title="加上锁之后"></a>加上锁之后</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">int</span> x = <span class="number">0</span>;</span><br><span class="line"><span class="built_in">object</span> obj = <span class="keyword">new</span> <span class="built_in">object</span>();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Thread1</span></span><br><span class="line"><span class="keyword">lock</span>(obj)</span><br><span class="line">&#123;</span><br><span class="line">    x = <span class="number">42</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// Thread2</span></span><br><span class="line"><span class="keyword">lock</span>(obj)</span><br><span class="line">&#123;</span><br><span class="line">    Console.WriteLine(x);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里存在：</p>
+<ul>
+<li>Thread1 的 unlock happens-before Thread2 的 lock</li>
+</ul>
+<p>因此：</p>
+<ul>
+<li>写入 <code>x = 42</code> 对 Thread2 可见</li>
+<li>不会打印 0</li>
+</ul>
+<h3 id="happens-before-的本质"><a href="#happens-before-的本质" class="headerlink" title="happens-before 的本质"></a>happens-before 的本质</h3><p>它本质上定义了：</p>
+<ul>
+<li>哪些操作会形成内存屏障</li>
+<li>哪些写入必须对后续读取可见</li>
+<li>哪些重排序是被禁止的</li>
+</ul>
+<p>常见建立 happens-before 的方式包括：</p>
+<ul>
+<li>释放锁 → 获取同一把锁</li>
+<li>volatile 写 → volatile 读</li>
+<li>线程启动</li>
+<li>线程 join</li>
+<li>原子操作</li>
+</ul>
+<p>无论是 .NET 还是 Java，内存模型的核心都是围绕 happens-before 构建。</p>
+<h2 id="三、-NET-是否有内存模型？"><a href="#三、-NET-是否有内存模型？" class="headerlink" title="三、.NET 是否有内存模型？"></a>三、.NET 是否有内存模型？</h2><p>有。</p>
+<p>.NET 的内存模型定义在 CLI（Common Language Infrastructure）规范中（ECMA 规范的一部分）。C# 作为运行在 CLI 之上的语言，遵循这一内存模型。</p>
+<p>.NET 内存模型定义了：</p>
+<ul>
+<li>在没有同步的情况下，允许重排序</li>
+<li>同步原语如何建立 happens-before 关系</li>
+<li>lock、volatile、Interlocked 等具备的内存屏障语义</li>
+</ul>
+<h2 id="二、什么是-happens-before？-1"><a href="#二、什么是-happens-before？-1" class="headerlink" title="二、什么是 happens-before？"></a>二、什么是 happens-before？</h2><p>happens-before 是内存模型中的一个偏序关系（partial order），用于定义：</p>
+<ul>
+<li>如果操作 A happens-before 操作 B，那么 A 的结果对 B 可见，并且 A 在逻辑上先于 B 执行。</li>
+</ul>
+<p>它并不表示“时间上的绝对先后”，而是表示一种可见性与顺序保证。</p>
+<p>可以理解为：</p>
+<ul>
+<li>如果没有 happens-before 关系 → 结果不可预测</li>
+<li>如果存在 happens-before 关系 → 可见性得到保证</li>
+</ul>
+<h3 id="一个简单示例-1"><a href="#一个简单示例-1" class="headerlink" title="一个简单示例"></a>一个简单示例</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">int</span> x = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Thread 1</span></span><br><span class="line">x = <span class="number">42</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Thread 2</span></span><br><span class="line">Console.WriteLine(x);</span><br></pre></td></tr></table></figure>
+<p>在没有同步的情况下：</p>
+<ul>
+<li>Thread 2 可能打印 0</li>
+<li>也可能打印 42</li>
+</ul>
+<p>因为两个线程之间没有 happens-before 关系。</p>
+<h3 id="加上锁之后-1"><a href="#加上锁之后-1" class="headerlink" title="加上锁之后"></a>加上锁之后</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">lock</span>(obj)</span><br><span class="line">&#123;</span><br><span class="line">    x = <span class="number">42</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">lock</span>(obj)</span><br><span class="line">&#123;</span><br><span class="line">    Console.WriteLine(x);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里存在：</p>
+<ul>
+<li>Thread1 的 unlock happens-before Thread2 的 lock</li>
+</ul>
+<p>因此：</p>
+<ul>
+<li>写入 <code>x = 42</code> 对 Thread2 可见</li>
+<li>不会打印 0</li>
+</ul>
+<h3 id="happens-before-的本质-1"><a href="#happens-before-的本质-1" class="headerlink" title="happens-before 的本质"></a>happens-before 的本质</h3><p>它本质上定义了：</p>
+<ul>
+<li>哪些操作会形成内存屏障</li>
+<li>哪些写入必须对后续读取可见</li>
+<li>哪些重排序是被禁止的</li>
+</ul>
+<p>常见建立 happens-before 的方式包括：</p>
+<ul>
+<li>释放锁 → 获取同一把锁</li>
+<li>volatile 写 → volatile 读</li>
+<li>线程启动</li>
+<li>线程 join</li>
+<li>原子操作</li>
+</ul>
+<p>无论是 .NET 还是 Java，内存模型的核心都是围绕 happens-before 构建。</p>
+<h2 id="三、-NET-是否有内存模型？-1"><a href="#三、-NET-是否有内存模型？-1" class="headerlink" title="三、.NET 是否有内存模型？"></a>三、.NET 是否有内存模型？</h2><p>有。</p>
+<p>.NET 的内存模型定义在 CLI（Common Language Infrastructure）规范中（ECMA 规范的一部分）。C# 作为运行在 CLI 之上的语言，遵循这一内存模型。</p>
+<p>.NET 内存模型定义了：</p>
+<ul>
+<li>在没有同步的情况下，允许重排序</li>
+<li>同步原语如何建立 happens-before 关系</li>
+<li>lock、volatile、Interlocked 等具备的内存屏障语义</li>
+</ul>
+<h2 id="四、-NET-内存模型核心机制"><a href="#四、-NET-内存模型核心机制" class="headerlink" title="四、.NET 内存模型核心机制"></a>四、.NET 内存模型核心机制</h2><h3 id="1-重排序"><a href="#1-重排序" class="headerlink" title="1. 重排序"></a>1. 重排序</h3><p>.NET 允许：</p>
+<ul>
+<li>编译器重排序（JIT）</li>
+<li>CPU 重排序</li>
+</ul>
+<p>只要不改变单线程语义，重排序是合法的。</p>
+<p>问题在于：多线程下如果没有同步，行为是不确定的。</p>
+<h3 id="2-可见性问题示例"><a href="#2-可见性问题示例" class="headerlink" title="2. 可见性问题示例"></a>2. 可见性问题示例</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">bool</span> ready = <span class="literal">false</span>;</span><br><span class="line"><span class="built_in">int</span> number = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Thread 1</span></span><br><span class="line">number = <span class="number">42</span>;</span><br><span class="line">ready = <span class="literal">true</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Thread 2</span></span><br><span class="line"><span class="keyword">if</span> (ready)</span><br><span class="line">&#123;</span><br><span class="line">	Console.WriteLine(number);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>理论上可能输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">0</span><br></pre></td></tr></table></figure>
+<p>原因可能是：</p>
+<ul>
+<li>写入 number 与 ready 被重排序</li>
+<li>ready 被先刷新到缓存</li>
+<li>number 仍然停留在线程缓存中</li>
+</ul>
+<h3 id="3-volatile"><a href="#3-volatile" class="headerlink" title="3. volatile"></a>3. volatile</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">volatile</span> <span class="built_in">bool</span> ready;</span><br></pre></td></tr></table></figure>
+<p>作用：</p>
+<ul>
+<li>禁止某些重排序</li>
+<li>保证对该变量的读写直接与主内存交互</li>
+</ul>
+<p>特点：</p>
+<ul>
+<li>保证可见性</li>
+<li>不保证复合操作的原子性</li>
+<li>不能替代锁</li>
+</ul>
+<p>.NET 中的 volatile 语义相对克制，更多用于简单状态标记。</p>
+<h3 id="4-lock（Monitor）"><a href="#4-lock（Monitor）" class="headerlink" title="4. lock（Monitor）"></a>4. lock（Monitor）</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">lock</span> (obj)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="comment">// critical section</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>本质是：</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Monitor.Enter(obj);</span><br><span class="line">...</span><br><span class="line">Monitor.Exit(obj);</span><br></pre></td></tr></table></figure>
+<p>语义包括：</p>
+<ul>
+<li>互斥</li>
+<li>完整内存屏障</li>
+<li>进入临界区时读取最新值</li>
+<li>退出临界区时刷新写入</li>
+</ul>
+<p>lock 不仅解决可见性问题，还解决竞态条件。</p>
+<h3 id="5-Interlocked"><a href="#5-Interlocked" class="headerlink" title="5. Interlocked"></a>5. Interlocked</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Interlocked.Increment(<span class="keyword">ref</span> count);</span><br></pre></td></tr></table></figure>
+<p>特点：</p>
+<ul>
+<li>原子操作</li>
+<li>无锁实现</li>
+<li>自带内存屏障语义</li>
+</ul>
+<p>常用于高性能并发场景，类似于 Java 中的原子类。</p>
+<h3 id="6-MemoryBarrier"><a href="#6-MemoryBarrier" class="headerlink" title="6. MemoryBarrier"></a>6. MemoryBarrier</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Thread.MemoryBarrier();</span><br></pre></td></tr></table></figure>
+<p>强制插入内存屏障：</p>
+<ul>
+<li>禁止前后指令重排序</li>
+<li>强制刷新缓存</li>
+</ul>
+<p>实际开发中很少直接使用，通常由 lock 或 Interlocked 隐式提供。</p>
+<h2 id="五、Java-内存模型（JMM）"><a href="#五、Java-内存模型（JMM）" class="headerlink" title="五、Java 内存模型（JMM）"></a>五、Java 内存模型（JMM）</h2><p>Java 内存模型定义在 Java Language Specification 中。</p>
+<p>它采用一个更抽象的结构：</p>
+<ul>
+<li>主内存（Main Memory）</li>
+<li>每个线程的工作内存（Working Memory）</li>
+</ul>
+<p>线程对变量的读写必须：</p>
+<ul>
+<li>从主内存加载到工作内存</li>
+<li>修改后再写回主内存</li>
+</ul>
+<p>Java 明确定义：</p>
+<ul>
+<li>happens-before 规则</li>
+<li>volatile 语义</li>
+<li>synchronized 语义</li>
+<li>final 字段的安全发布语义</li>
+</ul>
+<h2 id="六、-NET-与-Java-内存模型对比"><a href="#六、-NET-与-Java-内存模型对比" class="headerlink" title="六、.NET 与 Java 内存模型对比"></a>六、.NET 与 Java 内存模型对比</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>.NET</th>
+<th>Java</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>是否有正式规范</td>
+<td>CLI 规范</td>
+<td>JLS 规范</td>
+</tr>
+<tr>
+<td>是否定义 happens-before</td>
+<td>有</td>
+<td>有</td>
+</tr>
+<tr>
+<td>内存结构抽象</td>
+<td>不强调主/工作内存</td>
+<td>明确主内存 + 工作内存</td>
+</tr>
+<tr>
+<td>volatile 语义</td>
+<td>保证可见性，限制重排序</td>
+<td>语义更强，明确屏障类型</td>
+</tr>
+<tr>
+<td>锁机制</td>
+<td>lock / Monitor</td>
+<td>synchronized</td>
+</tr>
+<tr>
+<td>原子操作</td>
+<td>Interlocked</td>
+<td>AtomicXXX</td>
+</tr>
+<tr>
+<td>final 语义</td>
+<td>无直接等价机制</td>
+<td>final 保证安全发布</td>
+</tr>
+</tbody>
+</table>
+<h2 id="七、volatile-对比"><a href="#七、volatile-对比" class="headerlink" title="七、volatile 对比"></a>七、volatile 对比</h2><p>Java volatile：</p>
+<ul>
+<li>保证可见性</li>
+<li>禁止重排序</li>
+<li>明确包含 StoreLoad 屏障</li>
+<li>经常用于双重检查锁</li>
+</ul>
+<p>.NET volatile：</p>
+<ul>
+<li>保证读取最新值</li>
+<li>限制重排序</li>
+<li>语义略弱于 Java</li>
+<li>更多建议使用 lock 或 Interlocked</li>
+</ul>
+<h2 id="八、双重检查锁（DCL）差异"><a href="#八、双重检查锁（DCL）差异" class="headerlink" title="八、双重检查锁（DCL）差异"></a>八、双重检查锁（DCL）差异</h2><p>Java 中：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">static</span> Singleton instance;</span><br></pre></td></tr></table></figure>
+<p>必须 volatile，否则可能读取到半初始化对象。</p>
+<p>.NET 中：</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> Singleton instance;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">readonly</span> <span class="built_in">object</span> obj = <span class="keyword">new</span> <span class="built_in">object</span>();</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> Singleton Instance</span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">get</span></span><br><span class="line">	&#123;</span><br><span class="line">		<span class="keyword">if</span> (instance == <span class="literal">null</span>)</span><br><span class="line">		&#123;</span><br><span class="line">			<span class="keyword">lock</span> (obj)</span><br><span class="line">			&#123;</span><br><span class="line">				<span class="keyword">if</span> (instance == <span class="literal">null</span>)</span><br><span class="line">					instance = <span class="keyword">new</span> Singleton();</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">return</span> instance;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>.NET 2.0 之后的内存模型已经保证 DCL 安全。</p>
+<h2 id="九、两者设计哲学差异"><a href="#九、两者设计哲学差异" class="headerlink" title="九、两者设计哲学差异"></a>九、两者设计哲学差异</h2><p>Java：</p>
+<ul>
+<li>模型高度形式化</li>
+<li>明确抽象主内存与工作内存</li>
+<li>happens-before 规则非常完整</li>
+</ul>
+<p>.NET：</p>
+<ul>
+<li>更贴近 CPU 层面</li>
+<li>更依赖内存屏障语义</li>
+<li>抽象层级更低</li>
+</ul>
+<p>本质目标一致，但抽象方式不同。</p>
+<h2 id="十、与-GC-的关系"><a href="#十、与-GC-的关系" class="headerlink" title="十、与 GC 的关系"></a>十、与 GC 的关系</h2><p>GC 负责：</p>
+<ul>
+<li>对象生命周期</li>
+<li>内存回收</li>
+</ul>
+<p>内存模型负责：</p>
+<ul>
+<li>并发可见性</li>
+<li>指令重排序</li>
+<li>happens-before</li>
+</ul>
+<p>二者处于完全不同层面。</p>
+<h2 id="十一、总结"><a href="#十一、总结" class="headerlink" title="十一、总结"></a>十一、总结</h2><ul>
+<li>.NET 存在正式内存模型，定义在 CLI 规范中</li>
+<li>支持 happens-before 语义</li>
+<li>lock、Interlocked、volatile 都具有内存屏障语义</li>
+<li>Java 内存模型更加形式化，抽象更清晰</li>
+<li>两者核心目标一致，但实现哲学不同</li>
+</ul>
+<p>理解内存模型，本质是在理解并发程序的行为边界，以及同步机制在底层真正做了什么。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/" rel="tag">内存模型</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+<!-- Table of Contents -->
+
+
+  
+    <article id="post-理解-C-异步编程：async-await-原理与-Kotlin-协程对比"  class="article article-type-post" itemscope itemprop="blogPost" >
+  <div id="articleInner" class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="thumb" itemprop="name">
+      <a class="article-title" href="/2026/02/15/%E7%90%86%E8%A7%A3-C-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%EF%BC%9Aasync-await-%E5%8E%9F%E7%90%86%E4%B8%8E-Kotlin-%E5%8D%8F%E7%A8%8B%E5%AF%B9%E6%AF%94/">理解 C# 异步编程：async/await 原理与 Kotlin 协程对比</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-meta">
+      
+	<a href="/2026/02/15/%E7%90%86%E8%A7%A3-C-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%EF%BC%9Aasync-await-%E5%8E%9F%E7%90%86%E4%B8%8E-Kotlin-%E5%8D%8F%E7%A8%8B%E5%AF%B9%E6%AF%94/" class="article-date">
+	  <time datetime="2026-02-15T04:26:48.000Z" itemprop="datePublished">2026-02-15</time>
+	</a>
+
+      
+    <a class="article-category-link" href="/categories/net/">.net</a>
+
+      
+    </div>
+    <div class="article-entry" itemprop="articleBody">
+      
+        <img src="/2026/02/15/%E7%90%86%E8%A7%A3-C-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%EF%BC%9Aasync-await-%E5%8E%9F%E7%90%86%E4%B8%8E-Kotlin-%E5%8D%8F%E7%A8%8B%E5%AF%B9%E6%AF%94/book.jpg" class="" width="300" height="600" title="book">
+<p>异步编程是现代软件中必不可少的一部分，特别是在后端服务、高并发与 UI 程序中。C# 提供了语言级的 async/await 支持，而 Android/Kotlin 使用协程（Coroutines）来实现异步逻辑。两者都能让你以接近同步的方式编写异步代码，但它们的设计理念、运行机制和应用场景有明显差异。</p>
+        <!-- 
+异步编程是现代软件中必不可少的一部分，特别是在后端服务、高并发与 UI 程序中。C# 提供了语言级的 async/await 支持，而 Android/Kotlin 使用协程（Coroutines）来实现异步逻辑。两者都能让你以接近同步的方式编写异步代码，但它们的设计理念、运行机制和应用场景有明显差异。
+
+📌 一、异步编程的核心目标无论是 C# 的 async/await 还是 Kotl......  -->
+        <p class="article-more-link">
+          <a href="/2026/02/15/%E7%90%86%E8%A7%A3-C-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%EF%BC%9Aasync-await-%E5%8E%9F%E7%90%86%E4%B8%8E-Kotlin-%E5%8D%8F%E7%A8%8B%E5%AF%B9%E6%AF%94/#more">阅读全文</a>
+        </p>
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/" rel="tag">异步编程</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+<!-- Table of Contents -->
+
+
+  
     <article id="post-一个简单的代码结构演变-使用builder模式进行业务和功能的解耦合"  class="article article-type-post" itemscope itemprop="blogPost" >
   <div id="articleInner" class="article-inner">
     
@@ -798,114 +1197,6 @@
 一起读RxJava源码系列：一起读RxJava源码......  -->
         <p class="article-more-link">
           <a href="/2018/06/24/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E5%9B%9B%EF%BC%89%E2%80%94%E2%80%94%E8%BD%AC%E6%8D%A2%E6%93%8D%E4%BD%9C%E7%AC%A6/#more">阅读全文</a>
-        </p>
-      
-    </div>
-    <footer class="article-footer">
-      
-      
-      
-  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RxJava/" rel="tag">RxJava</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-<!-- Table of Contents -->
-
-
-  
-    <article id="post-一起读RxJava源码（三）——RxJava的基本实现"  class="article article-type-post" itemscope itemprop="blogPost" >
-  <div id="articleInner" class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 class="thumb" itemprop="name">
-      <a class="article-title" href="/2018/06/08/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%B8%89%EF%BC%89%E2%80%94%E2%80%94RxJava%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%AE%9E%E7%8E%B0/">一起读RxJava源码（三）——RxJava的基本实现</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-meta">
-      
-	<a href="/2018/06/08/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%B8%89%EF%BC%89%E2%80%94%E2%80%94RxJava%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%AE%9E%E7%8E%B0/" class="article-date">
-	  <time datetime="2018-06-08T11:39:16.000Z" itemprop="datePublished">2018-06-08</time>
-	</a>
-
-      
-    <a class="article-category-link" href="/categories/Android/">Android</a>
-
-      
-    </div>
-    <div class="article-entry" itemprop="articleBody">
-      
-        <img src="/2018/06/08/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%B8%89%EF%BC%89%E2%80%94%E2%80%94RxJava%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%AE%9E%E7%8E%B0/updown.jpeg" class="" width="600" height="300" title="操作">
-<p>　　前两篇我们介绍了RxJava的一些基本概念，以及通过源码了解了观察者模式这一基础知识。从这一章开始，我们将依次由浅入深的了解RxJava的主要操作以及源码的实现。</p>
-        <!-- 
-　　前两篇我们介绍了RxJava的一些基本概念，以及通过源码了解了观察者模式这一基础知识。从这一章开始，我们将依次由浅入深的了解RxJava的主要操作以及源码的实现。
-
-
-版权声明：本文为博主原创文章，未经博主允许不得转载。
-
-
-一起读RxJava源码系列：一起读RxJava源码（一）——简介一起读RxJava源码（二）——基础知识:观察者模式一起读RxJava源码（三）——RxJava的......  -->
-        <p class="article-more-link">
-          <a href="/2018/06/08/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%B8%89%EF%BC%89%E2%80%94%E2%80%94RxJava%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%AE%9E%E7%8E%B0/#more">阅读全文</a>
-        </p>
-      
-    </div>
-    <footer class="article-footer">
-      
-      
-      
-  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RxJava/" rel="tag">RxJava</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-<!-- Table of Contents -->
-
-
-  
-    <article id="post-一起读RxJava源码（二）——基础知识-观察者模式"  class="article article-type-post" itemscope itemprop="blogPost" >
-  <div id="articleInner" class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 class="thumb" itemprop="name">
-      <a class="article-title" href="/2018/05/27/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%BA%8C%EF%BC%89%E2%80%94%E2%80%94%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86-%E8%A7%82%E5%AF%9F%E8%80%85%E6%A8%A1%E5%BC%8F/">一起读RxJava源码（二）——基础知识:观察者模式</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-meta">
-      
-	<a href="/2018/05/27/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%BA%8C%EF%BC%89%E2%80%94%E2%80%94%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86-%E8%A7%82%E5%AF%9F%E8%80%85%E6%A8%A1%E5%BC%8F/" class="article-date">
-	  <time datetime="2018-05-27T07:49:06.000Z" itemprop="datePublished">2018-05-27</time>
-	</a>
-
-      
-    <a class="article-category-link" href="/categories/Android/">Android</a>
-
-      
-    </div>
-    <div class="article-entry" itemprop="articleBody">
-      
-        <img src="/2018/05/27/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%BA%8C%EF%BC%89%E2%80%94%E2%80%94%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86-%E8%A7%82%E5%AF%9F%E8%80%85%E6%A8%A1%E5%BC%8F/Itano_Tomomi.jpg" class="" width="800" height="562" title="板野友美">
-<p>　　不知不觉博客搭建完成已经一个多月了，至今磕磕绊绊才发了两篇。搭建自己的博客之前看过不少别人搭建的技术博客，隐约发现一个有意思的规律，似乎每个博客的开始段落都会放一张跟技术毫不相干的照片，比如风景照，明星，篮球，动漫等等。我看过的绝大多数技术博客都完美的符合这一规律，原因不详，不明觉厉。平常倒是见过很多餐厅里挂关公、宿舍里挂科比柯南的，不知道是不是同一个道理，emmm……そですね。 所以自己写博客的时候觉得也遵守一下规律，求以后写博客文思泉涌，<strong>周末不加班</strong>……。</p>
-        <!-- 
-　　不知不觉博客搭建完成已经一个多月了，至今磕磕绊绊才发了两篇。搭建自己的博客之前看过不少别人搭建的技术博客，隐约发现一个有意思的规律，似乎每个博客的开始段落都会放一张跟技术毫不相干的照片，比如风景照，明星，篮球，动漫等等。我看过的绝大多数技术博客都完美的符合这一规律，原因不详，不明觉厉。平常倒是见过很多餐厅里挂关公、宿舍里挂科比柯南的，不知道是不是同一个道理，emmm……そですね。 所以......  -->
-        <p class="article-more-link">
-          <a href="/2018/05/27/%E4%B8%80%E8%B5%B7%E8%AF%BBRxJava%E6%BA%90%E7%A0%81%EF%BC%88%E4%BA%8C%EF%BC%89%E2%80%94%E2%80%94%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86-%E8%A7%82%E5%AF%9F%E8%80%85%E6%A8%A1%E5%BC%8F/#more">阅读全文</a>
         </p>
       
     </div>
